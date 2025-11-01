@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -7,10 +8,19 @@ load_dotenv()
 
 # Google Sheets налаштування
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-CREDS_FILE = os.getenv('GOOGLE_CREDS_FILE', 'credentials.json')
-CREDS = ServiceAccountCredentials.from_json_keyfile_name(CREDS_FILE, SCOPE)
+
+if os.getenv("GOOGLE_CREDS"):
+    # Використовуємо ключ із змінної середовища (Render)
+    creds_dict = json.loads(os.getenv("GOOGLE_CREDS"))
+    CREDS = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
+else:
+    # Локально беремо credentials.json
+    CREDS_FILE = os.getenv('GOOGLE_CREDS_FILE', 'credentials.json')
+    CREDS = ServiceAccountCredentials.from_json_keyfile_name(CREDS_FILE, SCOPE)
+
 GS_CLIENT = gspread.authorize(CREDS)
 SHEET_BOOK = GS_CLIENT.open("WestCamp")
+
 
 # Словник аркушів
 SHEET_MAP = {
