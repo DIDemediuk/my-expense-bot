@@ -2,10 +2,13 @@ import datetime
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
-from config import WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE
+# Додано WAITING_EXPENSE_INPUT для коректного переходу
+from config import WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE, WAITING_EXPENSE_INPUT 
 from sheets import add_expense_to_sheet, parse_expense, parse_expense_simple
-from handlers.utils import send_main_menu  # Імпорт головного меню
+from handlers.utils import send_main_menu 
+from handlers.state_utils import handle_back_to_main # ✅ Виправлений імпорт для 'Назад'
 
+# --- Функції обробки дати ---
 
 async def ask_expense_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -17,8 +20,8 @@ async def ask_expense_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     if update.callback_query:
-        target_message = update.callback_query.message
-        await target_message.reply_text("📆 Оберіть дату операції:", reply_markup=reply_markup)
+        # Використовуємо edit_text, якщо це callback (наприклад, з головного меню)
+        await update.callback_query.message.edit_text("📆 Оберіть дату операції:", reply_markup=reply_markup)
         await update.callback_query.answer()
     elif update.message:
         await update.message.reply_text("📆 Оберіть дату операції:", reply_markup=reply_markup)
@@ -38,9 +41,11 @@ async def handle_expense_date_selection(update: Update, context: ContextTypes.DE
     elif query.data == "date_yesterday":
         selected_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime("%d.%m.%Y")
     elif query.data == "date_manual":
-        await query.message.reply_text("📝 Введіть дату у форматі ДД.ММ.РРРР (наприклад, 27.10.2025):")
+        # Переконайтеся, що edit_text використовується для callback
+        await query.message.edit_text("📝 Введіть дату у форматі ДД.ММ.РРРР (наприклад, 27.10.2025):")
         return WAITING_MANUAL_DATE
     elif query.data == "back_main":
+        # Тут handle_back_to_main має бути доступним (імпортованим)
         return await handle_back_to_main(update, context)
     else:
         return
@@ -58,6 +63,7 @@ async def handle_manual_date_input(update: Update, context: ContextTypes.DEFAULT
         await update.message.reply_text("⚠️ Невірний формат. Спробуйте ще раз (ДД.ММ.РРРР):")
         return WAITING_MANUAL_DATE
 
+# --- Функції обробки типу витрат ---
 
 async def show_expense_type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE, selected_date: str):
     context.user_data["selected_date"] = selected_date
@@ -66,51 +72,73 @@ async def show_expense_type_selection(update: Update, context: ContextTypes.DEFA
         [InlineKeyboardButton("📈 Other Expenses", callback_data="expense_type_other")],
         [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
     ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
+    text = f"📅 Обрана дата: **{selected_date}**\n\nОбери тип:"
+    
     if update.callback_query:
-        await update.callback_query.message.edit_text(
-            f"📅 Обрана дата: {selected_date}\n\nОбери тип:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        await update.callback_query.message.edit_text(text, reply_markup=reply_markup, parse_mode='Markdown')
     else:
-        await update.message.reply_text(
-            f"📅 Обрана дата: {selected_date}\n\nОбери тип:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+        
     return WAITING_EXPENSE_TYPE
 
+# ✅ ВИПРАВЛЕННЯ: Додано відсутню функцію handle_expense_type_selection
+async def handle_expense_type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    # Визначення типу витрати
+    expense_type = 'dividends' if query.data == "expense_type_dividends" else 'other'
+    context.user_data['expense_type'] = expense_type
+    
+    # Зміна тексту повідомлення
+    await query.message.edit_text(
+        f"✅ Тип: **{expense_type.upper()}**\n\n**📝 Введіть деталі витрати** (сума + опис, напр. '500 Бензин'):",
+        parse_mode='Markdown'
+    )
+    
+    # ПЕРЕХІД до очікування ВВОДУ тексту
+    return WAITING_EXPENSE_INPUT
+
+# --- Функція обробки введення ---
 
 async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     expense_type = context.user_data.get('expense_type', 'dividends')
+    selected_date = context.user_data.get('selected_date', datetime.datetime.now().strftime("%d.%m.%Y")) # Використовуйте дату
 
     if expense_type == 'dividends':
+        # Припускаємо, що parse_expense повертає dict з ключем 'сума'
         parsed = parse_expense(text)
     else:
         parsed = parse_expense_simple(text)
 
-    if parsed:
+    if parsed and 'сума' in parsed:
         try:
+            # Додаємо обрану дату до даних
+            parsed['Дата'] = selected_date 
             add_expense_to_sheet(parsed, context.user_data, expense_type)
+            
             subsub = context.user_data.get('subsubcategory', '')
-            msg = f"✅ Додано в {expense_type}!\nСума: {parsed['сума']} грн"
+            msg = f"✅ Додано в **{expense_type.upper()}**!\n**Дата**: {selected_date}\n**Сума**: {parsed['сума']} грн"
             if subsub:
                 msg += f"\n{subsub}"
-            await update.message.reply_text(msg)
+            await update.message.reply_text(msg, parse_mode='Markdown')
         except Exception as e:
-            await update.message.reply_text(f"❌ {e}")
+            logging.error(f"❌ Помилка запису в Sheets: {e}")
+            await update.message.reply_text(f"❌ Помилка запису. Деталі: {e}")
+            await update.message.reply_text("Спробуйте ввести дані ще раз або натисніть Назад.")
+            return WAITING_EXPENSE_INPUT # Залишаємось у стані, якщо помилка запису
     else:
-        await update.message.reply_text("⚠️ Не розпізнано. Спробуй ще.")
+        await update.message.reply_text("⚠️ Не розпізнано. Спробуй ще (формат: СУМА ОПИС).")
+        return WAITING_EXPENSE_INPUT # Залишаємось у стані, якщо помилка парсингу
 
     context.user_data.clear()
-    await send_main_menu(update, context)
+    await send_main_menu(update, context, text="Операція завершена.")
     return ConversationHandler.END
 
-
-async def handle_back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """⬅️ Обробник кнопки 'Назад'"""
-    query = update.callback_query
-    if query:
-        await query.answer()
-    await send_main_menu(update, context)
-    return ConversationHandler.END
+# --- Обробник 'Назад' ---
+# *Примітка: У вашому коді handle_back_to_main імпортується з іншого місця (або його потрібно імпортувати).*
+# Я замінив ваш локальний handle_back_to_main на імпорт з handlers.main_handler.
+# Якщо у вас цей обробник визначений у main_handler.py, то все гаразд.

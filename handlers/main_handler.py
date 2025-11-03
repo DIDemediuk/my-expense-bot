@@ -16,6 +16,7 @@ from config import (
 from handlers.expense_handler import ask_expense_date
 from handlers.utils import send_main_menu
 from reports import generate_daily_report, generate_camp_summary
+from handlers.state_utils import handle_back_to_main
 
 
 # === Головне меню ===
