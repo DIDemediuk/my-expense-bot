@@ -1,25 +1,62 @@
 import os
+import json
+import logging
 from dotenv import load_dotenv
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
-# Google Sheets налаштування
+# --- Налаштування Google Sheets ---
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-CREDS_FILE = os.getenv('GOOGLE_CREDS_FILE', 'credentials.json')
-CREDS = ServiceAccountCredentials.from_json_keyfile_name(CREDS_FILE, SCOPE)
-GS_CLIENT = gspread.authorize(CREDS)
-SHEET_BOOK = GS_CLIENT.open("WestCamp")
+CREDS = None # Ініціалізація змінної для облікових даних
 
-# Словник аркушів
-SHEET_MAP = {
-    'dividends': SHEET_BOOK.worksheet("Dividends"),
-    'other': SHEET_BOOK.worksheet("ShiftExpenses"),
-}
+# 1. Спроба завантажити з JSON-рядка (для Render/Хмарних сервісів)
+if os.getenv("GOOGLE_CREDS"):
+    try:
+        # Використовуємо ключ із змінної середовища
+        creds_dict = json.loads(os.getenv("GOOGLE_CREDS"))
+        CREDS = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
+        logging.info("✅ Google Sheets: Авторизація через змінну GOOGLE_CREDS.")
+    except Exception as e:
+        logging.error(f"❌ Google Sheets: Помилка парсингу GOOGLE_CREDS. Перевірте формат JSON: {e}")
+
+# 2. Спроба завантажити з локального файлу (ТІЛЬКИ для локального запуску)
+elif os.path.exists('credentials.json'):
+    try:
+        CREDS = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', SCOPE)
+        logging.info("✅ Google Sheets: Авторизація через локальний файл 'credentials.json'.")
+    except Exception as e:
+        logging.error(f"❌ Google Sheets: Помилка завантаження локального файлу: {e}")
+
+# --- Ініціалізація клієнта та словника аркушів ---
+GS_CLIENT = None
+SHEET_MAP = {}
+
+if CREDS:
+    try:
+        GS_CLIENT = gspread.authorize(CREDS)
+        SHEET_BOOK = GS_CLIENT.open("WestCamp")
+        
+        # Словник аркушів
+        SHEET_MAP = {
+            'dividends': SHEET_BOOK.worksheet("Dividends"),
+            'other': SHEET_BOOK.worksheet("ShiftExpenses"),
+        }
+        logging.info("✅ Google Sheets: З'єднання успішне.")
+    except Exception as e:
+        logging.error(f"❌ Google Sheets: Помилка відкриття таблиці 'WestCamp' або аркушів: {e}")
+else:
+    logging.error("❌ Google Sheets: Авторизація НЕ вдалася. Функції запису не працюватимуть.")
+
 
 def get_sheet_by_type(expense_type: str):
-    return SHEET_MAP.get(expense_type, SHEET_MAP['dividends'])
+    # Повертаємо аркуш, або None, якщо він не був ініціалізований
+    if not SHEET_MAP:
+        logging.warning("⚠️ SHEET_MAP не ініціалізовано. Функція запису не працює.")
+        return None
+    return SHEET_MAP.get(expense_type, SHEET_MAP.get('dividends'))
 
 # Колонки
 DIV_HEADERS = ['Дата', 'Джерело', 'Власник', 'Категорія', 'Сума', 'Примітка']
@@ -96,7 +133,7 @@ CONFIG_OTHER = {
         'змінa 1': ['Деталь 1', 'Деталь 2'],
         'маркетинг': ['Реклама', 'SMM', 'Промо', 'Креативи'],
     },
-    'subsubcategories_by_subcategory': {
+    'subsubcategories_by_category': {
         'відділ продажів': ['Яна', 'Віра', 'Соня'],
         'директор': ['Олег', 'Леся'],
     },
