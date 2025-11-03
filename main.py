@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PORT = int(os.environ.get("PORT", "10000"))  # Render відкриває цей порт автоматично
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # наприклад: https://my-expense-bot.onrender.com
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 async def main():
     if not BOT_TOKEN:
@@ -60,4 +60,5 @@ async def main():
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.get_event_loop().run_until_complete(main())
+
