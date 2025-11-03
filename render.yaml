@@ -1,0 +1,13 @@
+services:
+  - type: worker
+    name: finance-bot
+    env: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false        # щоб Render не зберіг токен у коді, а через Dashboard
+      - key: GOOGLE_CREDS_FILE
+        value: credentials.json
