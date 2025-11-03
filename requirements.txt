@@ -1,5 +1,5 @@
+python-telegram-bot==21.6
 aiohttp
-python-dotenv
-python-telegram-bot==20.6
 gspread
 oauth2client
+python-dotenv
