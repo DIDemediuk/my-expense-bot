@@ -2,7 +2,7 @@ import datetime
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
-from config import WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE
+from config import WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE, WAITING_EXPENSE_INPUT
 from sheets import add_expense_to_sheet, parse_expense, parse_expense_simple
 from handlers.utils import send_main_menu
 
@@ -75,10 +75,15 @@ async def handle_expense_type_selection(update: Update, context: ContextTypes.DE
     await query.answer()
     expense_type = 'dividends' if query.data == "expense_type_dividends" else 'other'
     context.user_data['expense_type'] = expense_type
+    
+    # Редагуємо повідомлення, щоб просити деталі
     await query.message.edit_text(
-        f"✅ Тип: {expense_type.upper()}\n\nВведи деталі витрати (сума + опис, напр. '500 Бензин'):"
+        f"✅ Тип: **{expense_type.upper()}**\n\n**📝 Введіть деталі витрати** (сума + опис, напр. '500 Бензин'):",
+        parse_mode='Markdown'
     )
-    return WAITING_EXPENSE_TYPE  # Тепер чекаємо текст
+    
+    # 🌟 ВИПРАВЛЕНО: Перехід до очікування ТЕКСТОВОГО вводу
+    return WAITING_EXPENSE_INPUT
 
 # Онови process_expense_input — використовуй handle_expense_type_selection в states
 async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
