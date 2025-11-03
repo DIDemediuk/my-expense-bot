@@ -33,6 +33,8 @@ if not BOT_TOKEN:
 # ✅ 2. Створення об'єкта Application (на рівні модуля, щоб був доступний handle)
 app = Application.builder().token(BOT_TOKEN).build()
 
+app_init_loop = asyncio.get_event_loop()
+app_init_loop.run_until_complete(app.initialize())
 
 # ✅ 3. Обробник вхідного Webhook-запиту
 async def handle(request):
@@ -57,8 +59,7 @@ async def main():
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # 4.2. !!! КРИТИЧНО !!! Ініціалізуємо Application
-    await app.initialize()
+ 
 
     # 4.3. Встановлення Webhook
     if WEBHOOK_URL:
