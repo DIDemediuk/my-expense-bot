@@ -35,7 +35,9 @@ except ImportError:
     async def handle_simple_subcategory(update, context): pass
     async def handle_simple_amount(update, context): pass
     async def handle_simple_comment(update, context): pass
-    async def WAITING_REPORT_TYPE(update, context): pass
+
+# Додай константу WAITING_REPORT_TYPE, якщо її немає в config (використовуй унікальне число)
+WAITING_REPORT_TYPE = 999  # Додай це — для стану меню звітів
 
 
 async def simple_back_to_main(update, context):
