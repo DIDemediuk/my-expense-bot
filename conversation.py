@@ -4,9 +4,13 @@ from handlers.expense_handler import (
     ask_expense_date, handle_expense_date_selection, handle_manual_date_input,
     handle_expense_type_selection, process_expense_input, handle_back_to_main  # Додали ask_expense_date та handle_expense_type_selection (з попереднього фіксу)
 )
-from handlers.report_handler import (
-    send_reports_menu, start_report_owner, start_report_fop, process_report_owner, process_report_fop
-)  # Припускаємо, що в report_handler є ці функції для entry та transition
+from handlers.expense_handler import (
+    ask_expense_date, handle_expense_date_selection, handle_manual_date_input,
+    handle_expense_type_selection, process_expense_input,
+    # ✅ ДОДАЄМО НОВІ ФУНКЦІЇ
+    handle_period_selection, handle_location_selection,
+    # ... інші handle_selection
+)
 from config import (
     WAITING_EXPENSE_TYPE, WAITING_PERIOD, WAITING_LOCATION, WAITING_CHANGE,
     WAITING_CATEGORY, WAITING_SUBCATEGORY, WAITING_SUBSUBCATEGORY, WAITING_EXPENSE_INPUT,
@@ -40,8 +44,15 @@ async def simple_back_to_main(update, context):
     await handle_back_to_main(update, context)  # Використовуй загальний back
     return ConversationHandler.END
 
+# forwarder to call entry_reports which is defined later in this file
+async def call_entry_reports(update, context):
+    return await entry_reports(update, context)
+
 conv_handler = ConversationHandler(
-    entry_points=[CallbackQueryHandler(handle_callback)],  # Залишаємо, якщо handle_callback обробляє simplified entry
+    entry_points=[
+        CommandHandler("menu", start),
+        MessageHandler(filters.Regex(r"^(📊 Звіти)$"), call_entry_reports), # <-- Це правильно, обробляє кнопку Звіти
+    ],  # Залишаємо, якщо handle_callback обробляє simplified entry
     states={
         WAITING_SIMPLE_DATE: [
             CallbackQueryHandler(handle_simple_date),
@@ -94,6 +105,27 @@ expense_conv = ConversationHandler(
         WAITING_EXPENSE_TYPE: [
             CallbackQueryHandler(handle_expense_type_selection, pattern="^(expense_type_dividends|expense_type_other)$"),  # Специфічний handler для типу
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")
+        ],
+
+        WAITING_PERIOD: [
+            CallbackQueryHandler(handle_period_selection, pattern="^period_"),
+            # Обробник Назад
+            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"), 
+        ],
+        
+        WAITING_LOCATION: [
+            CallbackQueryHandler(handle_location_selection, pattern="^location_"),
+            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
+        ],
+        
+        WAITING_CHANGE: [
+            # CallbackQueryHandler(handle_change_selection, pattern="^change_"),
+            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
+        ],
+        
+        WAITING_CATEGORY: [
+            # CallbackQueryHandler(handle_category_selection, pattern="^category_"),
+            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_EXPENSE_INPUT: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, process_expense_input),

@@ -3,10 +3,21 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 # Додано WAITING_EXPENSE_INPUT для коректного переходу
-from config import WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE, WAITING_EXPENSE_INPUT 
+from config import (
+    WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE, WAITING_EXPENSE_INPUT,
+    WAITING_PERIOD, WAITING_LOCATION, WAITING_CHANGE, WAITING_CATEGORY,
+    WAITING_SUBCATEGORY, WAITING_SUBSUBCATEGORY, CONFIG_OTHER # <--- CONFIG_OTHER теж потрібен
+)
 from sheets import add_expense_to_sheet, parse_expense, parse_expense_simple
-from handlers.utils import send_main_menu 
+from handlers.utils import (
+    send_main_menu, 
+    ask_period_menu,  
+    ask_location_menu,
+    ask_change_menu,
+    ask_category_menu
+) 
 from handlers.state_utils import handle_back_to_main # ✅ Виправлений імпорт для 'Назад'
+
 
 # --- Функції обробки дати ---
 
@@ -87,19 +98,59 @@ async def show_expense_type_selection(update: Update, context: ContextTypes.DEFA
 async def handle_expense_type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
-    # Визначення типу витрати
-    expense_type = 'dividends' if query.data == "expense_type_dividends" else 'other'
+    data = query.data
+    expense_type = data.split('_')[-1] # dividends або other
+
     context.user_data['expense_type'] = expense_type
     
-    # Зміна тексту повідомлення
-    await query.message.edit_text(
-        f"✅ Тип: **{expense_type.upper()}**\n\n**📝 Введіть деталі витрати** (сума + опис, напр. '500 Бензин'):",
-        parse_mode='Markdown'
-    )
+    if expense_type == 'dividends':
+        # Для дивідендів кроки простіші, тому одразу до введення
+        await query.message.edit_text(
+            f"✅ Тип: **{expense_type.upper()}**\n\n📝 Введіть деталі дивідендів (сума + джерело + власник, напр. '500 ФОП2 Яна'):",
+            parse_mode='Markdown'
+        )
+        return WAITING_EXPENSE_INPUT
+        
+    elif expense_type == 'other':
+        # ✅ Для OTHER: Починаємо покроковий вибір з Періоду
+        await ask_period_menu(update, context) 
+        return WAITING_PERIOD # <-- Перехід до очікування вибору Періоду
     
-    # ПЕРЕХІД до очікування ВВОДУ тексту
-    return WAITING_EXPENSE_INPUT
+    return ConversationHandler.END  
+
+async def handle_period_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+    
+    # Витягуємо ASCII-ключ періоду
+    period_key = data.split('_', 1)[-1] 
+    
+    # Зберігаємо вибраний період у user_data
+    period_name = CONFIG_OTHER['periods'].get(period_key, period_key)
+    context.user_data['period'] = period_name
+    
+    # ✅ Крок 2: Перехід до вибору Локації
+    await ask_location_menu(update, context) 
+    
+    return WAITING_LOCATION # <-- НОВИЙ СТАН
+
+async def handle_location_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+    
+    # Витягуємо ASCII-ключ локації
+    location_key = data.split('_', 1)[-1] 
+    
+    # Зберігаємо вибрану локацію
+    location_name = CONFIG_OTHER['locations'].get(location_key, location_key)
+    context.user_data['location'] = location_name
+    
+    # ✅ Крок 3: Перехід до вибору Зміни/Особи
+    await ask_change_menu(update, context) 
+    
+    return WAITING_CHANGE # <-- НОВИЙ СТАН
 
 # --- Функція обробки введення ---
 
