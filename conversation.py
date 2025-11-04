@@ -22,7 +22,17 @@ from config import (
 # --- simplified (залишаємо як є) ---
 # ... (ваш існуючий код для simplified) ...
 
-conv_handler = ConversationHandler(
+conv_handler = ConversationHandler( 
+    entry_points=[
+        # Наприклад, CommandHandler('menu', handle_menu)
+        CommandHandler('start', start) # Додайте стартову команду, якщо це головний хендлер
+    ],
+    states={
+        # Якщо він не має станів, можна залишити порожнім, але він повинен бути.
+    },
+    fallbacks=[
+        CommandHandler('help', start) # або інший обробник
+    ],
     # ... (ваш існуючий код для conv_handler) ...
     per_chat=True,
     per_message=False,
