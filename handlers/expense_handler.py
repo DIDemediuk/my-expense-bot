@@ -7,20 +7,20 @@ from telegram.ext import ContextTypes, ConversationHandler
 from config import (
     WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE, WAITING_EXPENSE_INPUT,
     WAITING_PERIOD, WAITING_LOCATION, WAITING_CHANGE, WAITING_CATEGORY,
-    WAITING_SUBCATEGORY, WAITING_SUBSUBCATEGORY, CONFIG_OTHER
+    WAITING_SUBCATEGORY, WAITING_SUBSUBCATEGORY, CONFIG_OTHER,
+    CHANGE_ASCII_TO_UKR, SUB_ASCII_TO_UKR, SUBSUB_ASCII_TO_UKR  # ✅ Додано мапінги для назв
 ) 
 from sheets import add_expense_to_sheet, parse_expense, parse_expense_simple
-# ✅ ВИПРАВЛЕНО: Імпортуємо всі функції меню та handle_back_to_main з utils
 from handlers.utils import (
     send_main_menu, 
     ask_period_menu,  
     ask_location_menu,
     ask_change_menu,
-    ask_category_menu,  # Додано
-    ask_subcategory_menu,  # Додано для підкатегорій
-    ask_subsubcategory_menu,  # Додано для підпідкатегорій
+    ask_category_menu,
+    ask_subcategory_menu,
+    ask_subsubcategory_menu,
     handle_back_to_main 
-) 
+)
 
 # --- Функції обробки дати (ОК) ---
 
