@@ -5,7 +5,8 @@ from handlers.expense_handler import (
     ask_expense_date, handle_expense_date_selection, handle_manual_date_input,
     handle_expense_type_selection, process_expense_input,
     # ✅ НОВІ ФУНКЦІЇ ДЛЯ ПОКРОКОВОГО ВВОДУ
-    handle_period_selection, handle_location_selection, handle_change_selection 
+    handle_period_selection, handle_location_selection, handle_change_selection,
+    handle_subcategory_selection, handle_subsubcategory_selection
     # Всі handle_back_to_main тепер імпортуються з handlers.utils!
 )
 from handlers.report_handler import (
@@ -70,7 +71,14 @@ expense_conv = ConversationHandler(
             # CallbackQueryHandler(handle_category_selection, pattern="^category_"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
-        # ... інші стани (WAITING_SUBCATEGORY, WAITING_SUBSUBCATEGORY)
+        WAITING_SUBCATEGORY: [
+            CallbackQueryHandler(handle_subcategory_selection, pattern="^subcategory_.*$"),  # ✅ Додати
+            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
+        ],
+        WAITING_SUBSUBCATEGORY: [
+            CallbackQueryHandler(handle_subsubcategory_selection, pattern="^subsubcategory_.*$"),  # ✅ Додати
+            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
+        ],
         
         WAITING_EXPENSE_INPUT: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, process_expense_input)

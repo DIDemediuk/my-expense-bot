@@ -1,4 +1,4 @@
-# handlers/expense_handler.py (ПОВНИЙ РОБОЧИЙ КОД)
+# handlers/expense_handler.py (Доповнений: додані handlers для category/subcategory)
 import datetime
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -16,14 +16,15 @@ from handlers.utils import (
     ask_period_menu,  
     ask_location_menu,
     ask_change_menu,
-    ask_category_menu,
+    ask_category_menu,  # Додано
+    ask_subcategory_menu,  # Додано для підкатегорій
+    ask_subsubcategory_menu,  # Додано для підпідкатегорій
     handle_back_to_main 
 ) 
 
 # --- Функції обробки дати (ОК) ---
 
 async def ask_expense_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ... Ваш існуючий код для меню вибору дати ...
     keyboard = [
         [InlineKeyboardButton("📅 Сьогодні", callback_data="date_today")],
         [InlineKeyboardButton("📆 Вчора", callback_data="date_yesterday")],
@@ -31,7 +32,6 @@ async def ask_expense_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    # ... логіка відображення меню ...
     if update.callback_query:
         await update.callback_query.message.edit_text("📆 Оберіть дату операції:", reply_markup=reply_markup)
         await update.callback_query.answer()
@@ -50,7 +50,7 @@ async def handle_expense_date_selection(update: Update, context: ContextTypes.DE
         await query.message.edit_text("📝 Введіть дату у форматі ДД.ММ.РРРР (наприклад, 27.10.2025):")
         return WAITING_MANUAL_DATE
     elif query.data == "back_main":
-        return await handle_back_to_main(update, context) # handle_back_to_main тепер з utils
+        return await handle_back_to_main(update, context)
     else:
         return
     return await show_expense_type_selection(update, context, selected_date)
@@ -133,14 +133,55 @@ async def handle_change_selection(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
     change_key = query.data.split('_', 1)[-1] 
-    # use CONFIG_OTHER 'changes' mapping if present, otherwise fallback to the raw key
-    change_name = CONFIG_OTHER.get('changes', {}).get(change_key, change_key)
+    change_name = CHANGE_ASCII_TO_UKR.get(change_key, change_key)  # ✅ Використовуємо мапінг з config
     context.user_data['change_key'] = change_key  # ✅ Зберігаємо ключ
     context.user_data['change'] = change_name
     
     # Крок 4: Перехід до вибору Категорії
     await ask_category_menu(update, context) 
     return WAITING_CATEGORY 
+
+# ✅ НОВИЙ: Обробник для вибору Категорії
+async def handle_category_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    cat_key = query.data.split('_', 1)[-1] 
+    cat_name = CONFIG_OTHER['categories_by_location'].get(context.user_data.get('location_key', ''), {}).get(cat_key, cat_key)  # Адаптуй за config
+    context.user_data['category_key'] = cat_key
+    context.user_data['category'] = cat_name
+    
+    # Крок 5: Перехід до вибору Підкатегорії
+    await ask_subcategory_menu(update, context)
+    return WAITING_SUBCATEGORY
+
+# ✅ НОВИЙ: Обробник для вибору Підкатегорії
+async def handle_subcategory_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    subcat_key = query.data.split('_', 1)[-1] 
+    subcat_name = SUB_ASCII_TO_UKR.get(subcat_key, subcat_key)  # З config
+    context.user_data['subcategory_key'] = subcat_key
+    context.user_data['subcategory'] = subcat_name
+    
+    # Крок 6: Перехід до вибору Підпідкатегорії (якщо потрібно)
+    await ask_subsubcategory_menu(update, context)
+    return WAITING_SUBSUBCATEGORY
+
+# ✅ НОВИЙ: Обробник для вибору Підпідкатегорії
+async def handle_subsubcategory_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    subsub_key = query.data.split('_', 1)[-1] 
+    subsub_name = SUBSUB_ASCII_TO_UKR.get(subsub_key, subsub_key)  # З config
+    context.user_data['subsubcategory_key'] = subsub_key
+    context.user_data['subsubcategory'] = subsub_name
+    
+    # Тепер до введення суми/коментаря
+    await query.message.edit_text(
+        f"✅ Підпідкатегорія: **{subsub_name}**\n\n📝 Введіть суму та опис (напр. '500 Бензин'):",
+        parse_mode='Markdown'
+    )
+    return WAITING_EXPENSE_INPUT
 
 # --- Функція обробки введення (залишити як є) ---
 
@@ -164,11 +205,15 @@ async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TY
             period = context.user_data.get('period', 'N/A')
             location = context.user_data.get('location', 'N/A')
             change = context.user_data.get('change', 'N/A')
+            category = context.user_data.get('category', 'N/A')
+            subcategory = context.user_data.get('subcategory', 'N/A')
+            subsubcategory = context.user_data.get('subsubcategory', 'N/A')
             
             msg = f"✅ Додано в **{expense_type.upper()}**!\n"
             msg += f"**Дата**: {selected_date}\n"
             if expense_type == 'other':
                 msg += f"**Період**: {period}\n**Локація**: {location}\n**Зміна**: {change}\n"
+                msg += f"**Категорія**: {category}\n**Підкатегорія**: {subcategory}\n**Підпідкатегорія**: {subsubcategory}\n"
             msg += f"**Сума**: {parsed['сума']} грн"
             
             await update.message.reply_text(msg, parse_mode='Markdown')
