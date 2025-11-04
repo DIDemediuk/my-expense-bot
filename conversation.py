@@ -80,6 +80,7 @@ async def entry_add_expense(update, context):
 
 expense_conv = ConversationHandler(
     entry_points=[
+        MessageHandler(filters.Regex(r"^➕ Додати витрату$"), ask_expense_date),
         CallbackQueryHandler(entry_add_expense, pattern="^add_expense$"),
         # Якщо є текстовий entry: MessageHandler(filters.Regex(r"(?i)додати витрату"), entry_add_expense)
     ],
