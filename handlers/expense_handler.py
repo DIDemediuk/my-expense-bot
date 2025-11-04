@@ -110,6 +110,7 @@ async def handle_period_selection(update: Update, context: ContextTypes.DEFAULT_
     await query.answer()
     period_key = query.data.split('_', 1)[-1] 
     period_name = CONFIG_OTHER['periods'].get(period_key, period_key)
+    context.user_data['period_key'] = period_key  # ✅ Зберігаємо ключ
     context.user_data['period'] = period_name
     
     # Крок 2: Перехід до вибору Локації
@@ -121,6 +122,7 @@ async def handle_location_selection(update: Update, context: ContextTypes.DEFAUL
     await query.answer()
     location_key = query.data.split('_', 1)[-1] 
     location_name = CONFIG_OTHER['locations'].get(location_key, location_key)
+    context.user_data['location_key'] = location_key  # ✅ Зберігаємо ключ
     context.user_data['location'] = location_name
     
     # Крок 3: Перехід до вибору Зміни/Особи
@@ -131,7 +133,8 @@ async def handle_change_selection(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
     change_key = query.data.split('_', 1)[-1] 
-    change_name = CONFIG_OTHER['changes'].get(change_key, change_key)
+    change_name = CHANGE_ASCII_TO_UKR.get(change_key, change_key)
+    context.user_data['change_key'] = change_key  # ✅ Зберігаємо ключ
     context.user_data['change'] = change_name
     
     # Крок 4: Перехід до вибору Категорії
