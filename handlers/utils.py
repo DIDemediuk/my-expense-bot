@@ -1,8 +1,9 @@
-# handlers/utils.py (Виправлений код з динамічними меню для changes та locations)
+# handlers/utils.py (Виправлений: видалено циркулярний імпорт)
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler  # <-- Потрібен для handle_back_to_main
 from config import CONFIG_OTHER, CHANGE_ASCII_TO_UKR  # Додано імпорт мапінгу для changes
-from handlers.utils import send_main_menu  # Якщо потрібно, але уникаємо циклу
+
+# ✅ ВИДАЛЕНО: from handlers.utils import send_main_menu  # Це було циркулярним!
 
 async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, text="🔹 Оберіть дію нижче:"):
     """Відображає головне меню користувачу."""

@@ -133,7 +133,8 @@ async def handle_change_selection(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
     change_key = query.data.split('_', 1)[-1] 
-    change_name = CHANGE_ASCII_TO_UKR.get(change_key, change_key)
+    # use CONFIG_OTHER 'changes' mapping if present, otherwise fallback to the raw key
+    change_name = CONFIG_OTHER.get('changes', {}).get(change_key, change_key)
     context.user_data['change_key'] = change_key  # ✅ Зберігаємо ключ
     context.user_data['change'] = change_name
     
