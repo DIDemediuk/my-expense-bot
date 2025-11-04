@@ -8,7 +8,7 @@ from config import (
     WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE, WAITING_EXPENSE_INPUT,
     WAITING_PERIOD, WAITING_LOCATION, WAITING_CHANGE, WAITING_CATEGORY,
     WAITING_SUBCATEGORY, WAITING_SUBSUBCATEGORY, CONFIG_OTHER,
-    CHANGE_ASCII_TO_UKR, SUB_ASCII_TO_UKR, SUBSUB_ASCII_TO_UKR  # ✅ Додано мапінги для назв
+    CHANGE_ASCII_TO_UKR, SUB_ASCII_TO_UKR, SUBSUB_ASCII_TO_UKR, CAT_ASCII_TO_UKR, CAT_UKR_TO_ASCII, SUB_UKR_TO_ASCII  # ✅ Додано зворотні мапінги для ключів
 ) 
 from sheets import add_expense_to_sheet, parse_expense, parse_expense_simple
 from handlers.utils import (
@@ -20,7 +20,7 @@ from handlers.utils import (
     ask_subcategory_menu,
     ask_subsubcategory_menu,
     handle_back_to_main 
-)
+) 
 
 # --- Функції обробки дати (ОК) ---
 
@@ -133,25 +133,80 @@ async def handle_change_selection(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
     change_key = query.data.split('_', 1)[-1] 
-    change_name = CHANGE_ASCII_TO_UKR.get(change_key, change_key)  # ✅ Використовуємо мапінг з config
+    change_name = CHANGE_ASCII_TO_UKR.get(change_key, change_key)
     context.user_data['change_key'] = change_key  # ✅ Зберігаємо ключ
     context.user_data['change'] = change_name
     
-    # Крок 4: Перехід до вибору Категорії
-    await ask_category_menu(update, context) 
-    return WAITING_CATEGORY 
+    # ✅ ФІКС: Завантажуємо категорії динамічно на основі change_name (e.g. '1 - Зміна': ['Розваги', ...])
+    categories_list = CONFIG_OTHER.get('categories_by_change', {}).get(change_name, [])  # List назв
+    
+    if not categories_list:
+        logging.warning(f"⚠️ Категорії не знайдено для зміни '{change_name}'. Використовуємо загальні.")
+        categories_list = ['Розваги', 'Команда', 'Проживання дітей', 'Додаткові витрати', 'Підготовка до табору']  # Fallback
+    
+    # Мапимо назви в ключі для callback (CAT_UKR_TO_ASCII)
+    category_keys = [CAT_UKR_TO_ASCII.get(cat, cat.lower().replace(' ', '_').replace('ї', 'i').replace('і', 'i')) for cat in categories_list]  # Адаптовано для укр. символів
+    
+    # Показуємо меню з назвами, callback з ключами
+    keyboard = []
+    current_row = []
+    for i, cat_name in enumerate(categories_list):
+        cat_key = category_keys[i]
+        current_row.append(InlineKeyboardButton(cat_name, callback_data=f"category_{cat_key}"))
+        if len(current_row) == 2:
+            keyboard.append(current_row)
+            current_row = []
+    if current_row:
+        keyboard.append(current_row)
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    prompt = f"📑 Оберіть **Категорію** (для зміни '{change_name}'):"
+    
+    await query.message.edit_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
+    return WAITING_CATEGORY
 
 # ✅ НОВИЙ: Обробник для вибору Категорії
 async def handle_category_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     cat_key = query.data.split('_', 1)[-1] 
-    cat_name = CONFIG_OTHER['categories_by_location'].get(context.user_data.get('location_key', ''), {}).get(cat_key, cat_key)  # Адаптуй за config
+    cat_name = CAT_ASCII_TO_UKR.get(cat_key, cat_key)  # Мапінг зворотний для назви
     context.user_data['category_key'] = cat_key
     context.user_data['category'] = cat_name
     
-    # Крок 5: Перехід до вибору Підкатегорії
-    await ask_subcategory_menu(update, context)
+    # ✅ ФІКС: Завантажуємо підкатегорії динамічно на основі cat_key (e.g. 'розваги': ['Гонорар', ...])
+    subcats_list = CONFIG_OTHER.get('subcategories_by_category', {}).get(cat_key, [])  # List назв
+    
+    if not subcats_list:
+        logging.warning(f"⚠️ Підкатегорії не знайдено для '{cat_name}'. Переходимо до введення.")
+        await query.message.edit_text(
+            f"✅ Категорія: **{cat_name}**\n\n📝 Введіть суму та опис (напр. '500 Бензин'):",
+            parse_mode='Markdown'
+        )
+        return WAITING_EXPENSE_INPUT
+    
+    # Мапимо назви в ключі для callback (SUB_UKR_TO_ASCII)
+    subcat_keys = [SUB_UKR_TO_ASCII.get(sub, sub.lower().replace(' ', '_').replace('ї', 'i').replace('і', 'i')) for sub in subcats_list]
+    
+    keyboard = []
+    current_row = []
+    for i, sub_name in enumerate(subcats_list):
+        sub_key = subcat_keys[i]
+        current_row.append(InlineKeyboardButton(sub_name, callback_data=f"subcategory_{sub_key}"))
+        if len(current_row) == 2:
+            keyboard.append(current_row)
+            current_row = []
+    if current_row:
+        keyboard.append(current_row)
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    prompt = f"📂 Оберіть **Підкатегорію** (для '{cat_name}'):"
+    
+    await query.message.edit_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
     return WAITING_SUBCATEGORY
 
 # ✅ НОВИЙ: Обробник для вибору Підкатегорії

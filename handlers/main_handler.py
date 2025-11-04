@@ -86,4 +86,4 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # ✅ handle_back_to_main тепер з utils.py
         return await handle_back_to_main(update, context)
         
-    return ConversationHandler.END # За замовчуванням
+    return ConversationHandler.END # За замовчуваннямй
