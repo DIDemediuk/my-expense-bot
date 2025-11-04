@@ -1,8 +1,7 @@
 # handlers/utils.py (ПОВНИЙ РОБОЧИЙ КОД)
-# ✅ ВИПРАВЛЕНО: Додані необхідні імпорти для Inline-клавіатур
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-from config import CONFIG_OTHER # ⚠️ Потрібен імпорт CONFIG_OTHER для роботи нових меню
+from telegram.ext import ContextTypes, ConversationHandler # <-- Потрібен для handle_back_to_main
+from config import CONFIG_OTHER # Потрібен для генерації меню
 
 async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, text="🔹 Оберіть дію нижче:"):
     """Відображає головне меню користувачу."""
@@ -32,9 +31,23 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, tex
             await query.message.reply_text(text, reply_markup=reply_markup)
         except Exception:
             await query.message.reply_text(text, reply_markup=reply_markup)
-
     else:
         pass 
+
+# ✅ ФУНКЦІЯ ДЛЯ РОЗІРВАННЯ ЦИКЛІЧНОГО ІМПОРТУ
+async def handle_back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробник для кнопки 'Назад'. Завершує ConversationHandler і повертає головне меню."""
+    if update.callback_query:
+        await update.callback_query.answer()
+    
+    await send_main_menu(update, context, text="⬅️ Повернуто до головного меню.")
+    
+    # Очищуємо дані, пов'язані з поточною розмовою
+    if context.user_data:
+        context.user_data.clear()
+        
+    return ConversationHandler.END
+
 
 # === ФУНКЦІЇ ДЛЯ ПОКРОКОВОГО МЕНЮ ВИТРАТ ===
 
@@ -45,7 +58,6 @@ async def _ask_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, config_k
     
     current_row = []
     for key, name in items.items():
-        # Формат callback_data: {callback_prefix}_{key}
         current_row.append(InlineKeyboardButton(name, callback_data=f"{callback_prefix}_{key}"))
         if len(current_row) == 2:
             keyboard.append(current_row)
@@ -54,7 +66,6 @@ async def _ask_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, config_k
     if current_row:
         keyboard.append(current_row)
         
-    # Кнопка Назад
     keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -67,7 +78,7 @@ async def _ask_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, config_k
 
 
 async def ask_period_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показує меню для вибору періоду витрати (Табір/Місяць)."""
+    """Показує меню для вибору періоду витрати."""
     return await _ask_menu(
         update, context, 
         config_key='periods', 

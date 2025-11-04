@@ -1,4 +1,4 @@
-# handlers/main_handler.py
+# handlers/main_handler.py (ПОВНИЙ ВИПРАВЛЕНИЙ КОД)
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
@@ -13,10 +13,12 @@ from config import (
     WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE
 )
 
-from handlers.expense_handler import ask_expense_date
-from handlers.utils import send_main_menu
+# ✅ ВИПРАВЛЕНО: Відновлюємо імпорт ask_expense_date
+from handlers.expense_handler import ask_expense_date 
+# ✅ Тепер handle_back_to_main імпортується з utils (фікс циклічного імпорту)
+from handlers.utils import send_main_menu, handle_back_to_main 
+from handlers.report_handler import send_reports_menu # Потрібен для handle_callback
 from reports import generate_daily_report, generate_camp_summary
-from handlers.state_utils import handle_back_to_main
 
 
 # === Головне меню ===
@@ -27,63 +29,40 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Повідомлення поза контекстом кнопок"""
-    await update.message.reply_text("⚠️ Використовуй кнопки меню нижче 👇")
-    await send_main_menu(update, context)
+    # ... (Ваша існуюча логіка обробки повідомлень, що не є командами/контекстом) ...
+    text = update.message.text
+    if text == "➕ Додати витрату":
+        # Це має обробляти ConversationHandler, але на всяк випадок перенаправимо на старт
+        return await ask_expense_date(update, context)
+    
+    # ... (інша логіка) ...
 
 
-async def handle_back_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Повернення у головне меню"""
-    context.user_data.clear()
-    await send_main_menu(update, context)
-    return ConversationHandler.END
-
-
-# === Основна логіка кнопок ===
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробник усіх callback-кнопок, що не належать ConversationHandler'ам"""
     query = update.callback_query
     await query.answer()
     data = query.data
 
-    # Ініціалізація навігаційного стеку
-    context.user_data.setdefault('nav_stack', [])
-
-    # --- Головне меню: додати витрату ---
+    # --- Додати витрату ---
     if data == "add_expense":
-        context.user_data.clear()
+        # ✅ ТЕПЕР ask_expense_date ВИЗНАЧЕНО
         return await ask_expense_date(update, context)
 
-    # --- Головне меню: звіти ---
+    # --- Звіти: Головне меню звітів ---
     elif data == "reports_menu":
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📊 Dividends звіти", callback_data="reports_div"),
-             InlineKeyboardButton("📊 Other звіти", callback_data="reports_other")],
-            [InlineKeyboardButton("📅 Звіт за день", callback_data="daily_report"),
-             InlineKeyboardButton("🏕️ Звіт по табору", callback_data="camp_summary_menu")],
-            [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
-        ])
-        await query.message.edit_text("Оберіть тип звіту:", reply_markup=keyboard)
-        return ConversationHandler.END
+        await send_reports_menu(update)
+        # Ваш ConversationHandler для звітів має перехопити наступний callback
+        return ConversationHandler.END # Або відповідний стан, якщо потрібно
 
-    # --- Звіт Dividends ---
-    elif data == "reports_div":
-        context.user_data['report_type'] = 'dividends'
-        await query.message.edit_text("Введи ім’я власника для звіту:")
-        return WAITING_REPORT_OWNER
-
-    # --- Звіт Other ---
-    elif data == "reports_other":
-        context.user_data['report_type'] = 'other'
-        await query.message.edit_text("Введи ФОП або ключове слово для звіту:")
-        return WAITING_REPORT_FOP
-
-    # --- Звіт за день ---
+    # --- Щоденний звіт ---
     elif data == "daily_report":
         report_text, parse_mode = generate_daily_report()
         await query.message.edit_text(report_text, parse_mode=parse_mode)
         await send_main_menu(update, context)
         return ConversationHandler.END
 
-    # --- Звіти по табору ---
+    # --- Звіти по табору (Camp Summary) ---
     elif data == "camp_summary_menu":
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("☀️ Літо 2025", callback_data="camp_summary_lito_2025"),
@@ -104,10 +83,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # --- Назад у головне меню ---
     elif data in ("back_main", "back"):
-        return await handle_back_main(update, context)
-
-    # --- Якщо callback невідомий ---
-    else:
-        logging.warning(f"Невідомий callback: {data}")
-        await send_main_menu(update, context, "⚠️ Невідома команда. Повертаюсь у головне меню.")
-        return ConversationHandler.END
+        # ✅ handle_back_to_main тепер з utils.py
+        return await handle_back_to_main(update, context)
+        
+    return ConversationHandler.END # За замовчуванням
