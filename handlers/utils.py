@@ -1,9 +1,7 @@
-# handlers/utils.py (Виправлений: видалено циркулярний імпорт)
+# handlers/utils.py (Повний фікс: додано ask_subcategory_menu та ask_subsubcategory_menu)
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, ConversationHandler  # <-- Потрібен для handle_back_to_main
-from config import CONFIG_OTHER, CHANGE_ASCII_TO_UKR  # Додано імпорт мапінгу для changes
-
-# ✅ ВИДАЛЕНО: from handlers.utils import send_main_menu  # Це було циркулярним!
+from telegram.ext import ContextTypes, ConversationHandler
+from config import CONFIG_OTHER, CHANGE_ASCII_TO_UKR, SUB_ASCII_TO_UKR, SUBSUB_ASCII_TO_UKR  # Додано для мапінгів
 
 async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, text="🔹 Оберіть дію нижче:"):
     """Відображає головне меню користувачу."""
@@ -36,7 +34,6 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, tex
     else:
         pass 
 
-# ✅ ФУНКЦІЯ ДЛЯ РОЗІРВАННЯ ЦИКЛІЧНОГО ІМПОРТУ
 async def handle_back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробник для кнопки 'Назад'. Завершує ConversationHandler і повертає головне меню."""
     if update.callback_query:
@@ -44,22 +41,17 @@ async def handle_back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     await send_main_menu(update, context, text="⬅️ Повернуто до головного меню.")
     
-    # Очищуємо дані, пов'язані з поточною розмовою
     if context.user_data:
         context.user_data.clear()
         
     return ConversationHandler.END
 
-
-# === ФУНКЦІЇ ДЛЯ ПОКРОКОВОГО МЕНЮ ВИТРАТ ===
-
 async def _ask_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, config_key: str, prompt: str, callback_prefix: str, mapping_dict=None, is_list=False, filter_key=None):
     """Універсальна функція для відображення inline-меню за конфігом. Підтримує dict/list."""
+    keyboard = []
+    current_row = []
     if is_list:
-        # Для динамічних списків (e.g. changes)
         items_list = CONFIG_OTHER.get(config_key, {}).get(filter_key, []) if filter_key else CONFIG_OTHER.get(config_key, [])
-        keyboard = []
-        current_row = []
         for key in items_list:
             name = mapping_dict.get(key, key) if mapping_dict else key
             current_row.append(InlineKeyboardButton(name, callback_data=f"{callback_prefix}_{key}"))
@@ -69,10 +61,7 @@ async def _ask_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, config_k
         if current_row:
             keyboard.append(current_row)
     else:
-        # Для статичних dict (e.g. periods, locations)
         items = CONFIG_OTHER.get(config_key, {})
-        keyboard = []
-        current_row = []
         for key, name in items.items():
             current_row.append(InlineKeyboardButton(name, callback_data=f"{callback_prefix}_{key}"))
             if len(current_row) == 2:
@@ -92,7 +81,6 @@ async def _ask_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, config_k
         await update.message.reply_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def ask_period_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показує меню для вибору періоду витрати (статичний dict)."""
     return await _ask_menu(
         update, context, 
         config_key='periods', 
@@ -101,18 +89,19 @@ async def ask_period_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def ask_location_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показує меню для вибору локації (динамічний список на основі періоду)."""
     period_key = context.user_data.get('period_key')
     if not period_key:
-        await update.callback_query.message.edit_text("❌ Помилка: Не вибрано період. Назад.")
+        if update.callback_query:
+            await update.callback_query.message.edit_text("❌ Помилка: Не вибрано період. Назад.")
+            await update.callback_query.answer()
+        else:
+            await update.message.reply_text("❌ Помилка: Не вибрано період. Назад.")
         return await handle_back_to_main(update, context)
     
     available_locations = CONFIG_OTHER['locations_by_period'].get(period_key, [])
-    # Фільтруємо повний список локацій
     full_locations = CONFIG_OTHER['locations']
     filtered_items = {k: full_locations[k] for k in available_locations if k in full_locations}
     
-    # Використовуємо _ask_menu з items=filtered_items (як dict)
     keyboard = []
     current_row = []
     for key, name in filtered_items.items():
@@ -134,11 +123,14 @@ async def ask_location_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def ask_change_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показує меню для вибору Зміни/Особи (динамічний список на основі періоду + локації)."""
     period_key = context.user_data.get('period_key')
     location_key = context.user_data.get('location_key')
     if not period_key or not location_key:
-        await update.callback_query.message.edit_text("❌ Помилка: Не вибрано період або локацію. Назад.")
+        if update.callback_query:
+            await update.callback_query.message.edit_text("❌ Помилка: Не вибрано період або локацію. Назад.")
+            await update.callback_query.answer()
+        else:
+            await update.message.reply_text("❌ Помилка: Не вибрано період або локацію. Назад.")
         return await handle_back_to_main(update, context)
     
     changes_list = CONFIG_OTHER['changes_by_location_period'].get(period_key, {}).get(location_key, [])
@@ -166,18 +158,20 @@ async def ask_change_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def ask_category_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показує меню для вибору Категорії (динамічний на основі локації, припускаємо dict)."""
     location_key = context.user_data.get('location_key')
     if not location_key:
-        await update.callback_query.message.edit_text("❌ Помилка: Не вибрано локацію. Назад.")
+        if update.callback_query:
+            await update.callback_query.message.edit_text("❌ Помилка: Не вибрано локацію. Назад.")
+            await update.callback_query.answer()
+        else:
+            await update.message.reply_text("❌ Помилка: Не вибрано локацію. Назад.")
         return await handle_back_to_main(update, context)
     
     categories_dict = CONFIG_OTHER['categories_by_location'].get(location_key, {})
     
     keyboard = []
     current_row = []
-    for cat_key, cat_name in categories_dict.items():  # Припускаємо {key: name} або nested
-        # Якщо nested dict, адаптуй: e.g. for sub_key, sub_name in cat_dict.items()
+    for cat_key, cat_name in categories_dict.items():
         current_row.append(InlineKeyboardButton(cat_name, callback_data=f"category_{cat_key}"))
         if len(current_row) == 2:
             keyboard.append(current_row)
@@ -189,6 +183,79 @@ async def ask_category_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     prompt = "📑 Оберіть **Категорію** (для обраної локації):"
+    
+    if update.callback_query:
+        await update.callback_query.message.edit_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
+        await update.callback_query.answer()
+    elif update.message:
+        await update.message.reply_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
+
+# ✅ НОВІ ФУНКЦІЇ: Меню для підкатегорій та підпідкатегорій
+async def ask_subcategory_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    category_key = context.user_data.get('category_key')
+    if not category_key:
+        if update.callback_query:
+            await update.callback_query.message.edit_text("❌ Помилка: Не вибрано категорію. Назад.")
+            await update.callback_query.answer()
+        else:
+            await update.message.reply_text("❌ Помилка: Не вибрано категорію. Назад.")
+        return await handle_back_to_main(update, context)
+    
+    # Припускаємо структуру CONFIG_OTHER['subcategories_by_category'][category_key] = {sub_key: name} або list
+    subcats = CONFIG_OTHER.get('subcategories_by_category', {}).get(category_key, {})
+    if isinstance(subcats, list):
+        # Якщо list ключів, мапимо з SUB_ASCII_TO_UKR
+        subcats = {k: SUB_ASCII_TO_UKR.get(k, k) for k in subcats}
+    
+    keyboard = []
+    current_row = []
+    for sub_key, sub_name in subcats.items():
+        current_row.append(InlineKeyboardButton(sub_name, callback_data=f"subcategory_{sub_key}"))
+        if len(current_row) == 2:
+            keyboard.append(current_row)
+            current_row = []
+    if current_row:
+        keyboard.append(current_row)
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    prompt = "📂 Оберіть **Підкатегорію** (для обраної категорії):"
+    
+    if update.callback_query:
+        await update.callback_query.message.edit_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
+        await update.callback_query.answer()
+    elif update.message:
+        await update.message.reply_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
+
+async def ask_subsubcategory_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    subcategory_key = context.user_data.get('subcategory_key')
+    if not subcategory_key:
+        if update.callback_query:
+            await update.callback_query.message.edit_text("❌ Помилка: Не вибрано підкатегорію. Назад.")
+            await update.callback_query.answer()
+        else:
+            await update.message.reply_text("❌ Помилка: Не вибрано підкатегорію. Назад.")
+        return await handle_back_to_main(update, context)
+    
+    # Припускаємо CONFIG_OTHER['subsubcategories_by_subcategory'][subcategory_key] = list ключів
+    subsubs_list = CONFIG_OTHER.get('subsubcategories_by_subcategory', {}).get(subcategory_key, [])
+    
+    keyboard = []
+    current_row = []
+    for subsub_key in subsubs_list:
+        name = SUBSUB_ASCII_TO_UKR.get(subsub_key, subsub_key)
+        current_row.append(InlineKeyboardButton(name, callback_data=f"subsubcategory_{subsub_key}"))
+        if len(current_row) == 2:
+            keyboard.append(current_row)
+            current_row = []
+    if current_row:
+        keyboard.append(current_row)
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    prompt = "📂 Оберіть **Підпідкатегорію** (для обраної підкатегорії):"
     
     if update.callback_query:
         await update.callback_query.message.edit_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
