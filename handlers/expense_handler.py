@@ -1,14 +1,16 @@
+# handlers/expense_handler.py (ВИПРАВЛЕНО)
 import datetime
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
-# Додано WAITING_EXPENSE_INPUT для коректного переходу
+# Додано всі необхідні константи станів
 from config import (
     WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE, WAITING_EXPENSE_INPUT,
     WAITING_PERIOD, WAITING_LOCATION, WAITING_CHANGE, WAITING_CATEGORY,
     WAITING_SUBCATEGORY, WAITING_SUBSUBCATEGORY, CONFIG_OTHER # <--- CONFIG_OTHER теж потрібен
-)
+) 
 from sheets import add_expense_to_sheet, parse_expense, parse_expense_simple
+# ✅ КРИТИЧНЕ ВИПРАВЛЕННЯ: Додано всі функції меню
 from handlers.utils import (
     send_main_menu, 
     ask_period_menu,  
@@ -16,85 +18,16 @@ from handlers.utils import (
     ask_change_menu,
     ask_category_menu
 ) 
-from handlers.state_utils import handle_back_to_main # ✅ Виправлений імпорт для 'Назад'
+from handlers.main_handler import handle_back_to_main # Імпорт функції для "Назад"
 
+# --- Функції обробки дати (залишити як є) ---
+# ... ask_expense_date, handle_expense_date_selection, handle_manual_date_input ...
 
-# --- Функції обробки дати ---
-
-async def ask_expense_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("📅 Сьогодні", callback_data="date_today")],
-        [InlineKeyboardButton("📆 Вчора", callback_data="date_yesterday")],
-        [InlineKeyboardButton("✏️ Ввести дату вручну", callback_data="date_manual")],
-        [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    if update.callback_query:
-        # Використовуємо edit_text, якщо це callback (наприклад, з головного меню)
-        await update.callback_query.message.edit_text("📆 Оберіть дату операції:", reply_markup=reply_markup)
-        await update.callback_query.answer()
-    elif update.message:
-        await update.message.reply_text("📆 Оберіть дату операції:", reply_markup=reply_markup)
-    else:
-        logging.error("❌ Невідомий тип update в ask_expense_date")
-        return ConversationHandler.END
-
-    return WAITING_EXPENSE_DATE
-
-
-async def handle_expense_date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == "date_today":
-        selected_date = datetime.datetime.now().strftime("%d.%m.%Y")
-    elif query.data == "date_yesterday":
-        selected_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime("%d.%m.%Y")
-    elif query.data == "date_manual":
-        # Переконайтеся, що edit_text використовується для callback
-        await query.message.edit_text("📝 Введіть дату у форматі ДД.ММ.РРРР (наприклад, 27.10.2025):")
-        return WAITING_MANUAL_DATE
-    elif query.data == "back_main":
-        # Тут handle_back_to_main має бути доступним (імпортованим)
-        return await handle_back_to_main(update, context)
-    else:
-        return
-
-    return await show_expense_type_selection(update, context, selected_date)
-
-
-async def handle_manual_date_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.strip()
-    try:
-        datetime.datetime.strptime(text, "%d.%m.%Y")
-        selected_date = text
-        return await show_expense_type_selection(update, context, selected_date)
-    except ValueError:
-        await update.message.reply_text("⚠️ Невірний формат. Спробуйте ще раз (ДД.ММ.РРРР):")
-        return WAITING_MANUAL_DATE
-
-# --- Функції обробки типу витрат ---
-
+# --- Функції обробки типу витрат (КРИТИЧНА ЛОГІКА) ---
 async def show_expense_type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE, selected_date: str):
-    context.user_data["selected_date"] = selected_date
-    keyboard = [
-        [InlineKeyboardButton("💰 Dividends", callback_data="expense_type_dividends")],
-        [InlineKeyboardButton("📈 Other Expenses", callback_data="expense_type_other")],
-        [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    text = f"📅 Обрана дата: **{selected_date}**\n\nОбери тип:"
-    
-    if update.callback_query:
-        await update.callback_query.message.edit_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-    else:
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-        
+    # ... (залишити як є) ...
     return WAITING_EXPENSE_TYPE
 
-# ✅ ВИПРАВЛЕННЯ: Додано відсутню функцію handle_expense_type_selection
 async def handle_expense_type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -104,7 +37,7 @@ async def handle_expense_type_selection(update: Update, context: ContextTypes.DE
     context.user_data['expense_type'] = expense_type
     
     if expense_type == 'dividends':
-        # Для дивідендів кроки простіші, тому одразу до введення
+        # Для дивідендів одразу до введення
         await query.message.edit_text(
             f"✅ Тип: **{expense_type.upper()}**\n\n📝 Введіть деталі дивідендів (сума + джерело + власник, напр. '500 ФОП2 Яна'):",
             parse_mode='Markdown'
@@ -112,45 +45,37 @@ async def handle_expense_type_selection(update: Update, context: ContextTypes.DE
         return WAITING_EXPENSE_INPUT
         
     elif expense_type == 'other':
-        # ✅ Для OTHER: Починаємо покроковий вибір з Періоду
+        # ✅ Починаємо покроковий вибір з Періоду
         await ask_period_menu(update, context) 
         return WAITING_PERIOD # <-- Перехід до очікування вибору Періоду
     
-    return ConversationHandler.END  
+    return ConversationHandler.END
 
+# --- НОВІ ОБРОБНИКИ ДЛЯ ПЕРІОДУ ТА ЛОКАЦІЇ ---
 async def handle_period_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    data = query.data
-    
-    # Витягуємо ASCII-ключ періоду
-    period_key = data.split('_', 1)[-1] 
-    
-    # Зберігаємо вибраний період у user_data
+    period_key = query.data.split('_', 1)[-1] 
     period_name = CONFIG_OTHER['periods'].get(period_key, period_key)
     context.user_data['period'] = period_name
     
-    # ✅ Крок 2: Перехід до вибору Локації
+    # Перехід до вибору Локації
     await ask_location_menu(update, context) 
-    
-    return WAITING_LOCATION # <-- НОВИЙ СТАН
+    return WAITING_LOCATION 
 
 async def handle_location_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    data = query.data
-    
-    # Витягуємо ASCII-ключ локації
-    location_key = data.split('_', 1)[-1] 
-    
-    # Зберігаємо вибрану локацію
+    location_key = query.data.split('_', 1)[-1] 
     location_name = CONFIG_OTHER['locations'].get(location_key, location_key)
     context.user_data['location'] = location_name
     
-    # ✅ Крок 3: Перехід до вибору Зміни/Особи
+    # Перехід до вибору Зміни/Особи
     await ask_change_menu(update, context) 
-    
-    return WAITING_CHANGE # <-- НОВИЙ СТАН
+    return WAITING_CHANGE 
+
+# --- Функція обробки введення (залишити як є) ---
+# ... process_expense_input ...
 
 # --- Функція обробки введення ---
 

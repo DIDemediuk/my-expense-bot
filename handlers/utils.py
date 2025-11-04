@@ -1,8 +1,8 @@
 # handlers/utils.py (ПОВНИЙ РОБОЧИЙ КОД)
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup # <-- ВАЖЛИВО!
+# ✅ ВИПРАВЛЕНО: Додані необхідні імпорти для Inline-клавіатур
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-# ⚠️ Потрібен імпорт CONFIG_OTHER для роботи нових меню
-from config import CONFIG_OTHER 
+from config import CONFIG_OTHER # ⚠️ Потрібен імпорт CONFIG_OTHER для роботи нових меню
 
 async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, text="🔹 Оберіть дію нижче:"):
     """Відображає головне меню користувачу."""
@@ -28,15 +28,12 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, tex
         query = update.callback_query
         await query.answer()
         try:
-            # Спроба відредагувати попереднє повідомлення та додати клавіатуру
             await query.message.edit_text(text)
             await query.message.reply_text(text, reply_markup=reply_markup)
         except Exception:
-            # Якщо повідомлення вже не можна редагувати — просто надсилаємо нове
             await query.message.reply_text(text, reply_markup=reply_markup)
 
     else:
-        # Fallback для інших типів Update
         pass 
 
 # === ФУНКЦІЇ ДЛЯ ПОКРОКОВОГО МЕНЮ ВИТРАТ ===
@@ -62,7 +59,6 @@ async def _ask_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, config_k
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Визначаємо, яке повідомлення редагувати/надсилати
     if update.callback_query:
         await update.callback_query.message.edit_text(prompt, reply_markup=reply_markup, parse_mode='Markdown')
         await update.callback_query.answer()

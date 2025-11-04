@@ -1,16 +1,17 @@
 from telegram.ext import ConversationHandler, CommandHandler, MessageHandler, CallbackQueryHandler, filters
-from handlers.main_handler import start, handle_message, handle_callback  # Додали handle_callback назад до імпорту
-from handlers.expense_handler import (
-    ask_expense_date, handle_expense_date_selection, handle_manual_date_input,
-    handle_expense_type_selection, process_expense_input, handle_back_to_main  # Додали ask_expense_date та handle_expense_type_selection (з попереднього фіксу)
-)
+from handlers.main_handler import start, handle_message, handle_callback
 from handlers.expense_handler import (
     ask_expense_date, handle_expense_date_selection, handle_manual_date_input,
     handle_expense_type_selection, process_expense_input,
-    # ✅ ДОДАЄМО НОВІ ФУНКЦІЇ
+    # ✅ НОВІ ФУНКЦІЇ ДЛЯ ПОКРОКОВОГО ВВОДУ
     handle_period_selection, handle_location_selection,
-    # ... інші handle_selection
+    # Додайте інші handle_selection, як тільки створите їх (наприклад, handle_change_selection)
 )
+from handlers.report_handler import (
+    send_reports_menu, start_report_owner, start_report_fop, 
+    process_report_owner, process_report_fop # ✅ КРИТИЧНЕ ВИПРАВЛЕННЯ: Переконайтеся, що ці функції імпортовані!
+) 
+from handlers.main_handler import handle_back_to_main # Імпорт функції для "Назад"
 from config import (
     WAITING_EXPENSE_TYPE, WAITING_PERIOD, WAITING_LOCATION, WAITING_CHANGE,
     WAITING_CATEGORY, WAITING_SUBCATEGORY, WAITING_SUBSUBCATEGORY, WAITING_EXPENSE_INPUT,
@@ -91,52 +92,40 @@ async def entry_add_expense(update, context):
 
 expense_conv = ConversationHandler(
     entry_points=[
-        MessageHandler(filters.Regex(r"^➕ Додати витрату$"), ask_expense_date),
-        CallbackQueryHandler(entry_add_expense, pattern="^add_expense$"),
-        # Якщо є текстовий entry: MessageHandler(filters.Regex(r"(?i)додати витрату"), entry_add_expense)
+        MessageHandler(filters.Regex(r"^➕ Додати витрату$"), ask_expense_date), 
+        CallbackQueryHandler(ask_expense_date, pattern="^(add_expense)$") 
     ],
     states={
         WAITING_EXPENSE_DATE: [
-            CallbackQueryHandler(handle_expense_date_selection, pattern="^(date_today|date_yesterday|date_manual|back_main)$"),
+            CallbackQueryHandler(handle_expense_date_selection, pattern="^(date_today|date_yesterday|date_manual|back_main)$")
         ],
         WAITING_MANUAL_DATE: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_manual_date_input),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_manual_date_input)
         ],
         WAITING_EXPENSE_TYPE: [
-            CallbackQueryHandler(handle_expense_type_selection, pattern="^(expense_type_dividends|expense_type_other)$"),  # Специфічний handler для типу
-            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")
+            CallbackQueryHandler(handle_expense_type_selection, pattern="^(expense_type_dividends|expense_type_other|back_main)$")
         ],
-
+        # ✅ НОВІ СТАНИ
         WAITING_PERIOD: [
             CallbackQueryHandler(handle_period_selection, pattern="^period_"),
-            # Обробник Назад
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"), 
         ],
-        
         WAITING_LOCATION: [
             CallbackQueryHandler(handle_location_selection, pattern="^location_"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
-        
         WAITING_CHANGE: [
+            # Обробник handle_change_selection потрібно створити!
             # CallbackQueryHandler(handle_change_selection, pattern="^change_"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
+        # ... інші стани (WAITING_CATEGORY, WAITING_SUBCATEGORY і т.д.)
         
-        WAITING_CATEGORY: [
-            # CallbackQueryHandler(handle_category_selection, pattern="^category_"),
-            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
-        ],
         WAITING_EXPENSE_INPUT: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, process_expense_input),
-            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")
+            MessageHandler(filters.TEXT & ~filters.COMMAND, process_expense_input)
         ],
-        # Якщо є інші стани як WAITING_PERIOD тощо, додай сюди аналогічно
-        # WAITING_PERIOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, your_period_handler)],  # Приклад — заміни на реальний
-        # ... аналогічно для WAITING_LOCATION, WAITING_CHANGE, WAITING_CATEGORY тощо
     },
     fallbacks=[
-        CommandHandler('start', start),
         CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")
     ],
     per_chat=True,
