@@ -134,7 +134,7 @@ CONFIG_OTHER = {
         'marketynh': ['Реклама', 'SMM', 'Промо', 'Креативи'],
     },
     'subsubcategories_by_category': {
-        'vidpil_prodazhiv': ['Яна', 'Віра', 'Соня'],
+        'viddil_prodazhiv': ['Яна', 'Віра', 'Соня'],
         'dyrektor': ['Олег', 'Леся'],
     },
     'changes_by_subcategory': {

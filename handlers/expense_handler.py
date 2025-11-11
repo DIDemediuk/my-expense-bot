@@ -143,7 +143,11 @@ async def handle_category_selection(update: Update, context: ContextTypes.DEFAUL
         await query.message.edit_text(f"✅ Категорія: **{cat_name}**\n\n💰 Введіть суму та опис:", parse_mode='Markdown')
         return WAITING_EXPENSE_INPUT
     
-    keyboard = [[InlineKeyboardButton(sub, callback_data=f"subcategory_{sub}")] for sub in subcats]
+    keyboard = [
+        [InlineKeyboardButton(sub, callback_data=f"subcategory_{SUB_UKR_TO_ASCII.get(sub, sub)}")]
+        for sub in subcats
+    ]
+
     keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.edit_text(f"📂 Підкатегорія для '{cat_name}':", reply_markup=reply_markup)
@@ -304,3 +308,4 @@ async def handle_subsubcategory_selection(update: Update, context: ContextTypes.
     )
 
     return await ask_account_selection(update, context)
+

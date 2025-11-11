@@ -9,7 +9,7 @@ from handlers.expense_handler import (
     handle_category_selection, handle_subcategory_selection,
     # Для підкатегорії "Тех. працівники"
     handle_person_selection, handle_manual_person_input,
-    ask_account_selection, handle_account_selection, handle_account_input
+    ask_account_selection, handle_account_selection, handle_account_input, handle_subsubcategory_selection
 )
 from handlers.report_handler import (
     send_reports_menu, start_report_owner, start_report_fop, 
@@ -78,13 +78,19 @@ expense_conv = ConversationHandler(
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
 
+        WAITING_SUBSUBCATEGORY: [
+        CallbackQueryHandler(handle_subsubcategory_selection, pattern="^subsubcategory_.*$"),
+        CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")
+        ],  
+
+
         WAITING_PERSON_NAME: [
         CallbackQueryHandler(handle_person_selection, pattern="^person_.*$"),
         MessageHandler(filters.TEXT & ~filters.COMMAND, handle_manual_person_input),
         CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_ACCOUNT_SELECTION: [
-            CallbackQueryHandler(ask_account_selection, pattern="^account_.*$"),
+            CallbackQueryHandler(handle_account_selection, pattern="^account_.*$"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_ACCOUNT_INPUT: [
