@@ -130,7 +130,11 @@ expense_conv = ConversationHandler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, process_expense_input)
         ],
     },
-    fallbacks=[CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")],
+    fallbacks=[
+        CommandHandler('start', handle_back_to_main),
+        CommandHandler('cancel', handle_back_to_main),
+        CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")
+    ],
     per_chat=True,
     per_message=False,
 )

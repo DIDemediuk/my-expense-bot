@@ -18,6 +18,13 @@ async def ask_expense_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ✅ КРИТИЧНИЙ ФІКС 1: Очищення контексту при старті розмови, щоб скинути незавершені попередні стани.
     context.user_data.clear()
     
+    # ✅ ФІКС: Видаляємо попереднє повідомлення, якщо воно є
+    if update.callback_query:
+        try:
+            await update.callback_query.message.delete()
+        except Exception:
+            pass
+    
     keyboard = [
         [InlineKeyboardButton("📅 Сьогодні", callback_data="date_today")],
         [InlineKeyboardButton("📆 Вчора", callback_data="date_yesterday")],

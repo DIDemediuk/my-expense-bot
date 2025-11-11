@@ -41,11 +41,21 @@ async def handle_back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Обробник для кнопки 'Назад'. Завершує ConversationHandler і повертає головне меню."""
     if update.callback_query:
         await update.callback_query.answer()
+        # ✅ КРИТИЧНИЙ ФІКС: Видаляємо inline-меню, щоб воно не залишалося на екрані
+        try:
+            await update.callback_query.message.delete()
+        except Exception as e:
+            # Якщо не вдалося видалити, редагуємо повідомлення
+            try:
+                await update.callback_query.message.edit_text("⬅️ Повернуто до головного меню.")
+            except Exception:
+                pass
     
+    # Очищуємо всі дані користувача
+    context.user_data.clear()
+    
+    # Показуємо головне меню
     await send_main_menu(update, context, text="⬅️ Повернуто до головного меню.")
-    
-    if context.user_data:
-        context.user_data.clear()
         
     return ConversationHandler.END
 
