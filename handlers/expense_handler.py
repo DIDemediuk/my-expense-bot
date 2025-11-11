@@ -15,7 +15,7 @@ from handlers.utils import send_main_menu, handle_back_to_main
 
 # --- Обробка дати ---
 async def ask_expense_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ✅ КРИТИЧНИЙ ФІКС: Очищення контексту при старті розмови.
+    # ✅ КРИТИЧНИЙ ФІКС 1: Очищення контексту при старті розмови, щоб скинути незавершені попередні стани.
     context.user_data.clear()
     
     keyboard = [
@@ -26,18 +26,12 @@ async def ask_expense_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # ✅ ОСТАННІЙ ФІКС СТРИБКІВ: Видаляємо старе повідомлення та надсилаємо нове,
-    # щоб гарантувати, що ConversationHandler коректно почне новий стан.
+    # ✅ КРИТИЧНИЙ ФІКС 2 (Реверт): Повертаємося до простої відповіді на кнопку (reply_text), 
+    # оскільки видалення повідомлення могло конфліктувати з ConversationHandler і викликати стрибки стану.
     if update.callback_query:
         await update.callback_query.answer()
-        # Видаляємо попереднє меню (щоб не було "зламаних" кнопок)
-        await update.callback_query.message.delete() 
         # Надсилаємо нове повідомлення
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id, 
-            text="📆 Оберіть дату операції:", 
-            reply_markup=reply_markup
-        )
+        await update.callback_query.message.reply_text("📆 Оберіть дату операції:", reply_markup=reply_markup)
     else:
         await update.message.reply_text("📆 Оберіть дату операції:", reply_markup=reply_markup)
         
@@ -300,8 +294,19 @@ async def handle_account_input(update: Update, context: ContextTypes.DEFAULT_TYP
 # --- Обробка суми ---
 async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
-    expense_type = context.user_data.get('expense_type', 'dividends')
+    
+    # ✅ ФІКС: Більш надійна перевірка типу витрат
+    expense_type = context.user_data.get('expense_type')
+    if not expense_type:
+        # Якщо expense_type втрачено, але є ключі, пов'язані з 'other', припускаємо 'other'
+        if context.user_data.get('period') or context.user_data.get('category'):
+            expense_type = 'other'
+        else:
+            # В іншому випадку, це справді виглядає як початковий стрибок/вибір Dividends
+            expense_type = 'dividends'
+            
     selected_date = context.user_data.get('selected_date', datetime.datetime.now().strftime("%d.%m.%Y"))
+    context.user_data['expense_type'] = expense_type # Встановлюємо back для подальшого використання
 
     if expense_type == 'dividends':
         parsed = parse_expense(text)
@@ -347,7 +352,12 @@ async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TY
             return WAITING_EXPENSE_INPUT
 
     else:
-        await update.message.reply_text("⚠️ Невірний формат. Спробуйте: `СУМА ОПИС`")
+        # ✅ ФІКС: Більш інформативне повідомлення про помилку, особливо для Dividends
+        if expense_type == 'dividends':
+             await update.message.reply_text("⚠️ Невірний формат. Для Dividends спробуйте: `СУМА ФОП Ім'я` (напр. `2000 ФОП2 Ваня`). ФОП повинен бути вказаний явно.", parse_mode='Markdown')
+        else:
+            await update.message.reply_text("⚠️ Невірний формат. Спробуйте: `СУМА ОПИС`")
+            
         return WAITING_EXPENSE_INPUT
 
     # ✅ Успішне завершення: очищення та кінець розмови
