@@ -136,6 +136,7 @@ CONFIG_OTHER = {
     'subsubcategories_by_category': {
         'viddil_prodazhiv': ['Яна', 'Віра', 'Соня'],
         'dyrektor': ['Олег', 'Леся'],
+        'tekh_pratsivnyky': ['Вова', 'Христина', 'інші'],
     },
     'changes_by_subcategory': {
         'reklama': "Рекламна кампанія",
@@ -186,6 +187,7 @@ SUB_ASCII_TO_UKR = {v: k for k, v in SUB_UKR_TO_ASCII.items()}
 
 SUBSUB_UKR_TO_ASCII = {
     "Яна": "yana", "Віра": "vira", "Соня": "sonya", "Олег": "oleg", "Леся": "lesya",
+    "Вова": "vova", "Христина": "khrystyna", "інші": "inshi",
 }
 SUBSUB_ASCII_TO_UKR = {v: k for k, v in SUBSUB_UKR_TO_ASCII.items()}
 

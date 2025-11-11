@@ -57,28 +57,56 @@ def parse_expense(text: str):
     }
 
 def parse_expense_simple(text: str):
+    """
+    Універсальний парсер для витрат типу 'other'.
+    Приймає формати:
+    - Просто число: "2000"
+    - Число + опис: "2000 реклама"
+    - Класичний формат: "ФОП2 2000 опис" або "ГОТІВКА 2000 опис"
+    """
     text = text.strip()
-    pattern = r"^(ФОП|ГОТІВКА)\s+(.+?)\s+(\d+(?:[ ,]\d{3})*(?:\.\d+)?)\s*(.*)$"
-    match = re.match(pattern, text, re.IGNORECASE | re.UNICODE)
-    if not match:
-        return None
-    prefix, source_str, amount_str, note = match.groups()
+    
+    # Спроба 1: Класичний формат (ФОП/ГОТІВКА + СУМА + ОПИС)
+    pattern_classic = r"^(ФОП|ГОТІВКА)\s+(.+?)\s+(\d+(?:[ ,]\d{3})*(?:[.,]\d+)?)\s*(.*)$"
+    match = re.match(pattern_classic, text, re.IGNORECASE | re.UNICODE)
+    if match:
+        prefix, source_str, amount_str, note = match.groups()
+        try:
+            amount = float(amount_str.replace(',', '.').replace(' ', ''))
+        except ValueError:
+            return None
+        if amount <= 0:
+            return None
+        if prefix.upper() == "ФОП":
+            possible_source = source_str.lower().strip()
+            matched_key = next((k for k in ACCOUNT_MAP if k in possible_source), None)
+            source = ACCOUNT_MAP.get(matched_key, source_str.strip()) if matched_key else source_str.strip()
+        else:
+            source = "Готівка"
+        return {
+            "рахунок": source,
+            "сума": amount,
+            "коментар": note.strip() if note and note.strip() else None
+        }
+    
+    # Спроба 2: Простий формат (СУМА або СУМА + ОПИС)
+    parts = text.split(maxsplit=1)
     try:
-        amount = float(amount_str.replace(',', '').replace(' ', ''))
-    except ValueError:
+        amount = float(parts[0].replace(',', '.').replace(' ', ''))
+    except (ValueError, IndexError):
         return None
+    
     if amount <= 0:
         return None
-    if prefix.upper() == "ФОП":
-        possible_source = source_str.lower().strip()
-        matched_key = next((k for k in ACCOUNT_MAP if k in possible_source), None)
-        source = ACCOUNT_MAP.get(matched_key, source_str.strip()) if matched_key else source_str.strip()
-    else:
-        source = "Готівка"
+    
+    # Опис (якщо є)
+    note = parts[1] if len(parts) > 1 else None
+    
+    # За замовчуванням рахунок — з контексту або "Готівка"
     return {
-        "рахунок": source,
+        "рахунок": "Готівка",  # Буде замінено з context.user_data['account'] пізніше
         "сума": amount,
-        "коментар": note.strip() if note.strip() else None
+        "коментар": note
     }
 
 def add_expense_to_sheet(parsed: dict, context_data: dict, expense_type: str):

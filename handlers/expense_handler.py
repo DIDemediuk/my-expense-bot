@@ -190,33 +190,19 @@ async def handle_subcategory_selection(update: Update, context: ContextTypes.DEF
     subcat_name = SUB_ASCII_TO_UKR.get(subcat_key, subcat_key)
     context.user_data['subcategory'] = subcat_name
     
-    # 1. СПЕЦІАЛЬНИЙ ВИПАДОК: "Тех. працівники"
-    if subcat_name == "Тех. працівники":
-        # Ініціалізуємо reply_markup для цього випадку
-        keyboard = [
-            [InlineKeyboardButton("Олег", callback_data="person_oleg")],
-            [InlineKeyboardButton("Леся", callback_data="person_lesya")],
-            [InlineKeyboardButton("Вова", callback_data="person_vova")],
-            [InlineKeyboardButton("Інший", callback_data="person_other")],
-            [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text("👤 Оберіть працівника або введіть ім'я:", reply_markup=reply_markup)
-        return WAITING_PERSON_NAME
-
-    # 2. ВИПАДОК: Є ПІД-ПІДкатегорії (Перехід до WAITING_SUBSUBCATEGORY)
+    # Перевіряємо, чи є підпідкатегорії (виконавці/працівники) для цієї підкатегорії
     if subcat_key in CONFIG_OTHER.get('subsubcategories_by_category', {}):
-        subsubs_dict = CONFIG_OTHER['subsubcategories_by_category'][subcat_key] 
+        subsubs_list = CONFIG_OTHER['subsubcategories_by_category'][subcat_key]
         
-        # Перетворюємо словник {ukr: ascii} на список кнопок
-        keyboard = [
-            [InlineKeyboardButton(ukr, callback_data=f"subsubcategory_{ascii_key}")]
-            for ascii_key, ukr in subsubs_dict.items() 
-        ]
+        # Створюємо кнопки для кожного працівника з конфігу
+        keyboard = []
+        for person_name in subsubs_list:
+            person_ascii = SUBSUB_UKR_TO_ASCII.get(person_name, person_name.lower().replace(' ', '_'))
+            keyboard.append([InlineKeyboardButton(person_name, callback_data=f"subsubcategory_{person_ascii}")])
         
         keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text(f"📂 Оберіть виконавця для '{subcat_name}':", reply_markup=reply_markup)
+        await query.message.edit_text(f"� Оберіть виконавця для '{subcat_name}':", reply_markup=reply_markup)
         return WAITING_SUBSUBCATEGORY
         
     # 3. СТАНДАРТНИЙ ВИПАДОК: Немає під-підкатегорій
@@ -312,6 +298,9 @@ async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TY
         parsed = parse_expense(text)
     else:
         parsed = parse_expense_simple(text)
+        # Якщо є account у контексті, використовуємо його
+        if parsed and context.user_data.get('account'):
+            parsed['рахунок'] = context.user_data['account']
 
     if parsed and 'сума' in parsed:
         try:
