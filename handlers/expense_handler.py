@@ -7,7 +7,7 @@ from config import (
     WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE, WAITING_EXPENSE_INPUT,
     WAITING_PERIOD, WAITING_LOCATION, WAITING_CHANGE, WAITING_CATEGORY,
     WAITING_SUBCATEGORY, WAITING_PERSON_NAME, WAITING_ACCOUNT_SELECTION,
-    CONFIG_OTHER, CHANGE_ASCII_TO_UKR, CAT_ASCII_TO_UKR, CAT_UKR_TO_ASCII, SUB_UKR_TO_ASCII, WAITING_ACCOUNT_INPUT,ACCOUNT_MAP
+    CONFIG_OTHER, SUB_ASCII_TO_UKR,  SUBSUB_UKR_TO_ASCII,  WAITING_SUBSUBCATEGORY, CHANGE_ASCII_TO_UKR, CAT_ASCII_TO_UKR, CAT_UKR_TO_ASCII, SUB_UKR_TO_ASCII, WAITING_ACCOUNT_INPUT,ACCOUNT_MAP
 ) 
 from sheets import add_expense_to_sheet, parse_expense, parse_expense_simple
 from handlers.utils import send_main_menu, handle_back_to_main
@@ -150,12 +150,21 @@ async def handle_category_selection(update: Update, context: ContextTypes.DEFAUL
     return WAITING_SUBCATEGORY
 
 # --- Вибір підкатегорії з особливістю для "Тех. працівники" ---
+# --- Вибір підкатегорії ---
 async def handle_subcategory_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    subcat_name = query.data.split('_', 1)[-1]
+    
+    # Отримуємо ключ підкатегорії (ASCII)
+    subcat_key = query.data.split('_', 1)[-1]
+    
+    # Перетворюємо ASCII у нормальну українську назву
+    subcat_name = SUB_ASCII_TO_UKR.get(subcat_key, subcat_key)
+    
+    # Зберігаємо підкатегорію у контекст
     context.user_data['subcategory'] = subcat_name
 
+    # 🧩 Якщо вибрано "Тех. працівники" — показуємо вибір особи
     if subcat_name == "Тех. працівники":
         keyboard = [
             [InlineKeyboardButton("Олег", callback_data="person_oleg")],
@@ -167,8 +176,22 @@ async def handle_subcategory_selection(update: Update, context: ContextTypes.DEF
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("👤 Оберіть працівника або введіть ім'я:", reply_markup=reply_markup)
         return WAITING_PERSON_NAME
-    
+
+    # 🔁 Якщо є під-підкатегорії (наприклад, для “Відділ продажів”)
+    if subcat_key in CONFIG_OTHER.get('subsubcategories_by_category', {}):
+        subsubs = CONFIG_OTHER['subsubcategories_by_category'][subcat_key]
+        keyboard = [
+            [InlineKeyboardButton(subsub, callback_data=f"subsubcategory_{SUBSUB_UKR_TO_ASCII.get(subsub, subsub)}")]
+            for subsub in subsubs
+        ]
+        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(f"📂 Оберіть підкатегорію для '{subcat_name}':", reply_markup=reply_markup)
+        return WAITING_SUBSUBCATEGORY
+
+    # 🧾 Інакше переходимо далі до вибору ФОПа
     return await ask_account_selection(update, context)
+
 
 # --- Введення імені вручну або вибір ---
 async def handle_person_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
