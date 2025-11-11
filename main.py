@@ -16,7 +16,7 @@ from telegram.ext import (
 # ✅ 1. ІМПОРТУЄМО ВСІ ХЕНДЛЕРИ ТА CONVERSATION HANDLER'И
 # Всі ці об'єкти повинні бути визначені у своїх файлах до імпорту.
 from config import SHEET_MAP
-from conversation import expense_conv, report_conv, conv_handler
+from conversation import expense_conv, report_conv, conv_handler, simplified_conv
 from handlers.main_handler import start, handle_callback, handle_message
 
 load_dotenv()
@@ -56,6 +56,7 @@ async def handle(request):
 # ✅ 4. Основна функція запуску
 async def main():
     # 4.1. Додаємо всі хендлери до Application
+    app.add_handler(simplified_conv)
     app.add_handler(expense_conv)
     app.add_handler(report_conv)
     app.add_handler(conv_handler)

@@ -4,12 +4,26 @@ from handlers.main_handler import start, handle_message, handle_callback
 from handlers.expense_handler import (
     ask_expense_date, handle_expense_date_selection, handle_manual_date_input,
     handle_expense_type_selection, process_expense_input,
-    # ✅ НОВІ ФУНКЦІЇ ДЛЯ ПОКРОКОВОГО ВВОДУ
     handle_period_selection, handle_location_selection, handle_change_selection,
     handle_category_selection, handle_subcategory_selection,
-    # Для підкатегорії "Тех. працівники"
     handle_person_selection, handle_manual_person_input,
     ask_account_selection, handle_account_selection, handle_account_input, handle_subsubcategory_selection, WAITING_SUBCATEGORY
+)
+# --- Додаємо імпорт для simplified_expense ---
+from handlers.simplified_expense import (
+    simplified_expense_flow,
+    handle_simple_date,
+    handle_simple_manual_date,
+    handle_simple_period,
+    handle_simple_subcategory,
+    handle_simple_amount,
+    handle_simple_comment,
+    WAITING_SIMPLE_DATE,
+    WAITING_SIMPLE_MANUAL_DATE,
+    WAITING_SIMPLE_PERIOD,
+    WAITING_SIMPLE_SUBCATEGORY,
+    WAITING_SIMPLE_AMOUNT,
+    WAITING_SIMPLE_COMMENT
 )
 from handlers.report_handler import (
     send_reports_menu, start_report_owner, start_report_fop, 
@@ -26,8 +40,22 @@ from config import (
 )
 
 
-# --- simplified (залишаємо як є) ---
-# ... (ваш існуючий код для simplified) ...
+
+# --- ConversationHandler для simplified_expense_flow ---
+simplified_conv = ConversationHandler(
+    entry_points=[CallbackQueryHandler(simplified_expense_flow, pattern="^add_expense_simple$")],
+    states={
+        WAITING_SIMPLE_DATE: [CallbackQueryHandler(handle_simple_date)],
+        WAITING_SIMPLE_MANUAL_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_simple_manual_date)],
+        WAITING_SIMPLE_PERIOD: [CallbackQueryHandler(handle_simple_period)],
+        WAITING_SIMPLE_SUBCATEGORY: [CallbackQueryHandler(handle_simple_subcategory)],
+        WAITING_SIMPLE_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_simple_amount)],
+        WAITING_SIMPLE_COMMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_simple_comment)],
+    },
+    fallbacks=[CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")],
+    per_chat=True,
+    per_message=False,
+)
 
 conv_handler = ConversationHandler( 
     entry_points=[
