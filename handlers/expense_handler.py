@@ -266,3 +266,18 @@ async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data.clear()
     await send_main_menu(update, context, "Операція завершена.")
     return ConversationHandler.END
+
+async def handle_subsubcategory_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    subsub_key = query.data.split('_', 1)[-1]
+    context.user_data['subsubcategory'] = subsub_key
+
+    # Якщо є ще глибші рівні — тут можна буде додати додаткову логіку
+    await query.message.edit_text(
+        f"✅ Обрано: **{subsub_key}**\n\n💼 Тепер оберіть ФОПа:",
+        parse_mode='Markdown'
+    )
+
+    return await ask_account_selection(update, context)
