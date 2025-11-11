@@ -9,7 +9,7 @@ from handlers.expense_handler import (
     handle_category_selection, handle_subcategory_selection,
     # Для підкатегорії "Тех. працівники"
     handle_person_selection, handle_manual_person_input,
-    ask_account_selection, handle_account_selection, handle_account_input, handle_subsubcategory_selection
+    ask_account_selection, handle_account_selection, handle_account_input, handle_subsubcategory_selection, WAITING_SUBCATEGORY
 )
 from handlers.report_handler import (
     send_reports_menu, start_report_owner, start_report_fop, 
@@ -60,10 +60,10 @@ expense_conv = ConversationHandler(
         WAITING_EXPENSE_TYPE: [
             CallbackQueryHandler(handle_expense_type_selection, pattern="^(expense_type_dividends|expense_type_other|back_main)$")
         ],
-        # ✅ НОВІ СТАНИ ДЛЯ OTHER EXPENSES
+
         WAITING_PERIOD: [
             CallbackQueryHandler(handle_period_selection, pattern="^period_"),
-            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"), 
+            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_LOCATION: [
             CallbackQueryHandler(handle_location_selection, pattern="^location_"),
@@ -77,39 +77,36 @@ expense_conv = ConversationHandler(
             CallbackQueryHandler(handle_category_selection, pattern="^category_.*$"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
-
-        WAITING_SUBSUBCATEGORY: [
-        CallbackQueryHandler(handle_subsubcategory_selection, pattern="^subsubcategory_.*$"),
-        CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")
-        ],  
-
-
+        WAITING_SUBCATEGORY: [
+            CallbackQueryHandler(handle_subcategory_selection, pattern="^subcategory_.*$"),
+            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
+        ],
+        WAITING_SUBSUBCATEGORY: [  # 🧩 додано
+            CallbackQueryHandler(handle_subsubcategory_selection, pattern="^subsubcategory_.*$"),
+            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
+        ],
         WAITING_PERSON_NAME: [
-        CallbackQueryHandler(handle_person_selection, pattern="^person_.*$"),
-        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_manual_person_input),
-        CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
+            CallbackQueryHandler(handle_person_selection, pattern="^person_.*$"),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_manual_person_input),
+            CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_ACCOUNT_SELECTION: [
-            CallbackQueryHandler(handle_account_selection, pattern="^account_.*$"),
+            CallbackQueryHandler(handle_account_selection, pattern="^account_.*$"),  # ✅ фікс
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_ACCOUNT_INPUT: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, handle_account_input),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
-        
-      
-        
         WAITING_EXPENSE_INPUT: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, process_expense_input)
         ],
     },
-    fallbacks=[
-        CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")
-    ],
+    fallbacks=[CallbackQueryHandler(handle_back_to_main, pattern="^back_main$")],
     per_chat=True,
     per_message=False,
 )
+
 
 # --- Звіти ---
 async def entry_reports(update, context):
