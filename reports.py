@@ -144,6 +144,77 @@ def generate_report(date_range=None, owner=None, fop=None, expense_type='dividen
     report_lines.append(f"──────────────\n💰 Всього: {total_sum:.2f} грн")
     return "\n".join(report_lines)
 
+def generate_period_report(period_name: str):
+    """
+    Звіт по періоду з детальною структурою:
+    - Загальний дохід
+    - Загальні витрати
+    - Різниця (заробіток)
+    - Розбивка витрат по категоріях
+    """
+    try:
+        period_lower = period_name.strip().lower()
+        income_total = 0.0
+        expense_total = 0.0
+        
+        sheet = SHEET_MAP['other']
+        rows = sheet.get_all_records(expected_headers=OTHER_HEADERS)
+        logging.info(f"Звіт по періоду '{period_name}': завантажено {len(rows)} рядків")
+        
+        expense_category_groups = defaultdict(float)
+        
+        for row in rows:
+            period = str(row.get("Період", "")).strip().lower()
+            type_ = str(row.get("Група", "")).strip().lower()
+            
+            if period == period_lower:
+                raw_sum = row.get("Сума", "")
+                amount = parse_amount(raw_sum)
+                
+                if amount > 0:
+                    if "дохід" in type_:
+                        income_total += amount
+                    elif "розхід" in type_:
+                        expense_total += amount
+                        # Збираємо категорії витрат
+                        category = str(row.get("Категорії", "")).strip()
+                        if not category:
+                            category = str(row.get("Дод. категорії", "Інше")).strip()
+                        if category:
+                            expense_category_groups[category] += amount
+        
+        # Розрахунок різниці (заробітку)
+        profit = income_total - expense_total
+        expense_percent = (expense_total / income_total * 100) if income_total > 0 else 0
+        
+        # Формування звіту
+        report_lines = [
+            f"📊 *Фінансовий звіт: {period_name}*\n",
+            f"──────────────────────\n",
+            f"🟢 *Загальний дохід:* {income_total:,.2f} грн\n",
+            f"🔴 *Загальні витрати:* {expense_total:,.2f} грн ({expense_percent:.1f}% від доходу)\n",
+            f"💰 *Заробіток (різниця):* {profit:,.2f} грн",
+        ]
+        
+        # Розбивка витрат по категоріях
+        if expense_category_groups:
+            report_lines.append("\n──────────────────────")
+            report_lines.append("📋 *Витрати по категоріях:*\n")
+            
+            for cat, amt in sorted(expense_category_groups.items(), key=lambda x: x[1], reverse=True):
+                if amt > 0:
+                    pct = (amt / expense_total * 100) if expense_total > 0 else 0
+                    report_lines.append(f"  • {cat}: {amt:,.2f} грн ({pct:.1f}%)")
+        
+        report = "\n".join(report_lines)
+        logging.info(f"Звіт '{period_name}': дохід={income_total}, витрати={expense_total}, заробіток={profit}")
+        return report, 'Markdown'
+        
+    except Exception as e:
+        logging.exception("Помилка у generate_period_report")
+        return f"❌ Помилка: {e}", None
+
+
 def generate_daily_report(expense_type=None):
     from config import SHEET_MAP, DIV_HEADERS, OTHER_HEADERS
     today = datetime.date.today().strftime("%d.%m.%Y")

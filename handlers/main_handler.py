@@ -17,7 +17,7 @@ from config import (
 from handlers.expense_handler import ask_expense_date 
 # ✅ Тепер handle_back_to_main імпортується з utils (фікс циклічного імпорту)
 from handlers.utils import send_main_menu, handle_back_to_main 
-from handlers.report_handler import send_reports_menu # Потрібен для handle_callback
+from handlers.report_handler import send_reports_menu, show_period_selection, handle_period_report
 from reports import generate_daily_report, generate_camp_summary
 
 
@@ -52,8 +52,19 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # --- Звіти: Головне меню звітів ---
     elif data == "reports_menu":
         await send_reports_menu(update)
-        # Ваш ConversationHandler для звітів має перехопити наступний callback
-        return ConversationHandler.END # Або відповідний стан, якщо потрібно
+        return ConversationHandler.END
+    
+    # --- Звіт по періоду ---
+    elif data == "report_period":
+        return await show_period_selection(update, context)
+    
+    elif data.startswith("period_report_"):
+        return await handle_period_report(update, context)
+    
+    # --- Назад до меню звітів ---
+    elif data == "back_to_reports":
+        await send_reports_menu(update)
+        return ConversationHandler.END
 
     # --- Щоденний звіт ---
     elif data == "daily_report":
