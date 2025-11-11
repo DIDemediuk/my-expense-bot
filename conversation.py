@@ -6,8 +6,10 @@ from handlers.expense_handler import (
     handle_expense_type_selection, process_expense_input,
     # ✅ НОВІ ФУНКЦІЇ ДЛЯ ПОКРОКОВОГО ВВОДУ
     handle_period_selection, handle_location_selection, handle_change_selection,
-    handle_subcategory_selection, handle_subsubcategory_selection, handle_category_selection
-    # Всі handle_back_to_main тепер імпортуються з handlers.utils!
+    handle_category_selection, handle_subcategory_selection,
+    # Для підкатегорії "Тех. працівники"
+    handle_person_selection, handle_manual_person_input,
+    ask_account_selection, handle_account_selection, handle_account_input
 )
 from handlers.report_handler import (
     send_reports_menu, start_report_owner, start_report_fop, 
@@ -16,9 +18,13 @@ from handlers.report_handler import (
 from handlers.utils import handle_back_to_main # ✅ ФІКС ЦИКЛІЧНОГО ІМПОРТУ
 from config import (
     WAITING_EXPENSE_TYPE, WAITING_PERIOD, WAITING_LOCATION, WAITING_CHANGE,
-    WAITING_CATEGORY, WAITING_SUBCATEGORY, WAITING_SUBSUBCATEGORY, WAITING_EXPENSE_INPUT,
-    WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_REPORT_OWNER, WAITING_REPORT_FOP
+    WAITING_CATEGORY, WAITING_SUBSUBCATEGORY, WAITING_EXPENSE_INPUT,
+    WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_REPORT_OWNER, WAITING_REPORT_FOP,
+    WAITING_PERSON_NAME,
+    WAITING_ACCOUNT_SELECTION,
+    WAITING_ACCOUNT_INPUT
 )
+
 
 # --- simplified (залишаємо як є) ---
 # ... (ваш існуючий код для simplified) ...
@@ -71,14 +77,22 @@ expense_conv = ConversationHandler(
             CallbackQueryHandler(handle_category_selection, pattern="^category_.*$"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
-        WAITING_SUBCATEGORY: [
-            CallbackQueryHandler(handle_subcategory_selection, pattern="^subcategory_.*$"),  # ✅ Додати
+
+        WAITING_PERSON_NAME: [
+        CallbackQueryHandler(handle_person_selection, pattern="^person_.*$"),
+        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_manual_person_input),
+        CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
+        ],
+        WAITING_ACCOUNT_SELECTION: [
+            CallbackQueryHandler(ask_account_selection, pattern="^account_.*$"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
-        WAITING_SUBSUBCATEGORY: [
-            CallbackQueryHandler(handle_subsubcategory_selection, pattern="^subsubcategory_.*$"),  # ✅ Додати
+        WAITING_ACCOUNT_INPUT: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_account_input),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
+        
+      
         
         WAITING_EXPENSE_INPUT: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, process_expense_input)
