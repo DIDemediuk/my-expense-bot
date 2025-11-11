@@ -90,6 +90,8 @@ async def handle_period_report(update: Update, context: ContextTypes.DEFAULT_TYP
     
     report_text, parse_mode = generate_period_report(period_name)
     
-    await query.message.edit_text(report_text, parse_mode=parse_mode)
-    await send_main_menu(update, context)
-    return ConversationHandler.END
+    # Додаємо кнопку "Назад до звітів"
+    keyboard = [[InlineKeyboardButton("⬅️ Назад до звітів", callback_data="back_to_reports")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(report_text, parse_mode=parse_mode, reply_markup=reply_markup)
