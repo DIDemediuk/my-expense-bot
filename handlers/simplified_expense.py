@@ -70,22 +70,46 @@ async def handle_simple_subcategory(update, context):
 
 async def handle_simple_amount(update, context):
     text = update.message.text.strip()
+    # Дозволяємо просто число або число + опис
+    parts = text.split(maxsplit=1)
     try:
-        amount = float(text.replace(',', '.'))
+        amount = float(parts[0].replace(',', '.'))
     except Exception:
         await update.message.reply_text("❗️ Введіть коректну суму (наприклад, 1500 або 1500.50)")
         return WAITING_SIMPLE_AMOUNT
     context.user_data['amount'] = amount
-    # Далі - коментар (опціонально)
-    await update.message.reply_text("Додайте коментар або натисніть /skip, якщо не потрібно:")
-    return WAITING_SIMPLE_COMMENT
+    # Якщо є опис — одразу зберігаємо як коментар
+    if len(parts) > 1:
+        context.user_data['comment'] = parts[1]
+        # Одразу записуємо в таблицю
+        parsed = {
+            "рахунок": "Готівка",
+            "сума": amount,
+            "коментар": parts[1]
+        }
+        try:
+            add_expense_to_sheet(parsed, context.user_data, expense_type='other')
+            await update.message.reply_text(
+                f"✅ Запис збережено!\nПеріод: {context.user_data.get('period')}\nПідкатегорія: {context.user_data.get('subcategory')}\nСума: {amount}\nКоментар: {parts[1]}"
+            )
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка запису у таблицю: {e}")
+        context.user_data.clear()
+        return -1
+    else:
+        # Якщо опису немає — питаємо про коментар
+        await update.message.reply_text("Додайте коментар або натисніть /skip, якщо не потрібно:")
+        return WAITING_SIMPLE_COMMENT
 
 async def handle_simple_comment(update, context):
     text = update.message.text.strip()
-    context.user_data['comment'] = text
-    # Формуємо дані для запису
+    # Дозволяємо /skip для пропуску коментаря
+    if text == '/skip':
+        context.user_data['comment'] = ''
+    else:
+        context.user_data['comment'] = text
     parsed = {
-        "рахунок": "Готівка",  # або інший спосіб визначення рахунку
+        "рахунок": "Готівка",
         "сума": context.user_data.get('amount'),
         "коментар": context.user_data.get('comment', '')
     }
@@ -97,4 +121,4 @@ async def handle_simple_comment(update, context):
     except Exception as e:
         await update.message.reply_text(f"❌ Помилка запису у таблицю: {e}")
     context.user_data.clear()
-    return -1  # Кінець розмови
+    return -1
