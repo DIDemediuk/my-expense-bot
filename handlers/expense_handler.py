@@ -15,8 +15,7 @@ from handlers.utils import send_main_menu, handle_back_to_main
 
 # --- Обробка дати ---
 async def ask_expense_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ✅ КРИТИЧНИЙ ФІКС: Очищення контексту при старті розмови,
-    # щоб скинути будь-які незавершені попередні стани та дані.
+    # ✅ КРИТИЧНИЙ ФІКС: Очищення контексту при старті розмови.
     context.user_data.clear()
     
     keyboard = [
@@ -27,9 +26,18 @@ async def ask_expense_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
+    # ✅ ОСТАННІЙ ФІКС СТРИБКІВ: Видаляємо старе повідомлення та надсилаємо нове,
+    # щоб гарантувати, що ConversationHandler коректно почне новий стан.
     if update.callback_query:
-        await update.callback_query.message.edit_text("📆 Оберіть дату операції:", reply_markup=reply_markup)
         await update.callback_query.answer()
+        # Видаляємо попереднє меню (щоб не було "зламаних" кнопок)
+        await update.callback_query.message.delete() 
+        # Надсилаємо нове повідомлення
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id, 
+            text="📆 Оберіть дату операції:", 
+            reply_markup=reply_markup
+        )
     else:
         await update.message.reply_text("📆 Оберіть дату операції:", reply_markup=reply_markup)
         
@@ -43,6 +51,7 @@ async def handle_expense_date_selection(update: Update, context: ContextTypes.DE
     elif query.data == "date_yesterday":
         selected_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime("%d.%m.%Y")
     elif query.data == "date_manual":
+        # Редагуємо повідомлення, яке тільки що надіслали (date selection menu)
         await query.message.edit_text("📝 Введіть дату (ДД.ММ.РРРР):")
         return WAITING_MANUAL_DATE
     elif query.data == "back_main":
@@ -71,9 +80,11 @@ async def show_expense_type_selection(update: Update, context: ContextTypes.DEFA
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     text = f"📅 Дата: **{selected_date}**\n\nОберіть тип:"
+    # Редагуємо повідомлення про вибір дати (яке було надіслано в ask_expense_date)
     if update.callback_query:
         await update.callback_query.message.edit_text(text, reply_markup=reply_markup, parse_mode='Markdown')
     else:
+        # Цей випадок для manual date input, де ми використовуємо update.message.reply_text
         await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
     return WAITING_EXPENSE_TYPE
 
