@@ -127,7 +127,7 @@ CONFIG_OTHER = {
         'komanda': ['Зарплата', 'Проживання і харчування', 'Трансфер команди', 'Дод. витрати'],
         'prozhivanie_ditey': ['За всю зміну', 'Дод. витрати'],
         'dodatkovi_vytraty': ['Канцтовари', 'Медикаменти', 'Паливо', 'Декор', 'Настілки', 'Інші витрати', 'Мерч'],
-        'zarplata': ['Відділ продажів', 'Адмін', 'Директор', 'Тех. працівники'],
+        'zarplata': ['Відділ продажів', 'Адмін', 'Директор', 'Маркетинг','Тех. працівники'],
         'logistyka': ['Транспорт', 'Склад'],
         'pover_koshtiv': ['Аванс 1', 'Аванс 2'],
         'zmina1': ['Деталь 1', 'Деталь 2'],
@@ -136,6 +136,7 @@ CONFIG_OTHER = {
     'subsubcategories_by_category': {
         'viddil_prodazhiv': ['Яна', 'Віра', 'Соня'],
         'dyrektor': ['Олег', 'Леся'],
+        'marketynh': ['Ярослав'],
         'tekh_pratsivnyky': ['Вова', 'Христина', 'інші'],
     },
     'changes_by_subcategory': {
@@ -187,7 +188,7 @@ SUB_ASCII_TO_UKR = {v: k for k, v in SUB_UKR_TO_ASCII.items()}
 
 SUBSUB_UKR_TO_ASCII = {
     "Яна": "yana", "Віра": "vira", "Соня": "sonya", "Олег": "oleg", "Леся": "lesya",
-    "Вова": "vova", "Христина": "khrystyna", "інші": "inshi",
+    "Вова": "vova", "Христина": "khrystyna", "інші": "inshi", "Ярослав": "yaroslav"
 }
 SUBSUB_ASCII_TO_UKR = {v: k for k, v in SUBSUB_UKR_TO_ASCII.items()}
 
