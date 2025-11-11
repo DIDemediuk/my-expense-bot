@@ -7,7 +7,8 @@ from config import (
     WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_EXPENSE_TYPE, WAITING_EXPENSE_INPUT,
     WAITING_PERIOD, WAITING_LOCATION, WAITING_CHANGE, WAITING_CATEGORY,
     WAITING_SUBCATEGORY, WAITING_PERSON_NAME, WAITING_ACCOUNT_SELECTION,
-    CONFIG_OTHER, SUB_ASCII_TO_UKR,  SUBSUB_UKR_TO_ASCII,  WAITING_SUBSUBCATEGORY, CHANGE_ASCII_TO_UKR, CAT_ASCII_TO_UKR, CAT_UKR_TO_ASCII, SUB_UKR_TO_ASCII, WAITING_ACCOUNT_INPUT,ACCOUNT_MAP
+    CONFIG_OTHER, SUB_ASCII_TO_UKR, SUBSUB_UKR_TO_ASCII, WAITING_SUBSUBCATEGORY, CHANGE_ASCII_TO_UKR, 
+    CAT_ASCII_TO_UKR, CAT_UKR_TO_ASCII, SUB_UKR_TO_ASCII, WAITING_ACCOUNT_INPUT, ACCOUNT_MAP, SUBSUB_ASCII_TO_UKR
 ) 
 from sheets import add_expense_to_sheet, parse_expense, parse_expense_simple
 from handlers.utils import send_main_menu, handle_back_to_main
@@ -97,12 +98,12 @@ async def handle_period_selection(update: Update, context: ContextTypes.DEFAULT_
     await query.answer()
     period_key = query.data.split('_', 1)[-1]
     
-    # 🚨 ВИПРАВЛЕННЯ: Зберігаємо обидва, ключ і назву
-    context.user_data['period_key'] = period_key # <--- ДОДАНО: Ключ для доступу до CONFIG
+    # ✅ ВИПРАВЛЕННЯ: Зберігаємо обидва, ключ і назву
+    context.user_data['period_key'] = period_key 
     context.user_data['period'] = CONFIG_OTHER['periods'][period_key]
     
     # Використовуємо period_key, який тепер існує
-    locations = CONFIG_OTHER['locations_by_period'][period_key]
+    locations = CONFIG_OTHER['locations_by_period'].get(period_key, [])
     keyboard = [[InlineKeyboardButton(CONFIG_OTHER['locations'][loc], callback_data=f"location_{loc}")] for loc in locations]
     keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -113,19 +114,19 @@ async def handle_location_selection(update: Update, context: ContextTypes.DEFAUL
     query = update.callback_query
     await query.answer()
     location_key = query.data.split('_', 1)[-1]
-    context.user_data['location_key'] = location_key # <--- ДОДАНО
+    context.user_data['location_key'] = location_key 
     context.user_data['location'] = CONFIG_OTHER['locations'][location_key]
     
-    period_key = context.user_data.get('period_key') # Отримуємо збережений ключ
+    period_key = context.user_data.get('period_key') 
     
-    # Отримуємо доступні зміни. Використовуємо .get() для безпеки.
+    # Отримуємо доступні зміни.
     changes_map = CONFIG_OTHER['changes_by_location_period'].get(period_key, {}).get(location_key, [])
 
     if not changes_map:
-        # 🚨 ВИПРАВЛЕННЯ: Якщо змін немає (напр., Transfer), пропускаємо крок WAITING_CHANGE
+        # ✅ ВИПРАВЛЕННЯ: Якщо змін немає (напр., Transfer), пропускаємо крок WAITING_CHANGE
         
         # Встановлюємо заглушку для Зміни
-        change_ukr = 'Трансфер' if location_key == 'Transfer' else 'Операційні витрати'
+        change_ukr = CONFIG_OTHER['locations'].get(location_key, location_key) # Використовуємо назву локації
         context.user_data['change'] = change_ukr 
         
         # Переходимо одразу до вибору Категорії
@@ -143,10 +144,10 @@ async def handle_change_selection(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
     change_key = query.data.split('_', 1)[-1]
-    change_name = CHANGE_ASCII_TO_UKR[change_key]
+    change_name = CHANGE_ASCII_TO_UKR.get(change_key, change_key) # Використовуємо .get() для безпеки
     context.user_data['change'] = change_name
     
-    location_key = context.user_data['location_key'] # Використовуємо збережений ключ
+    location_key = context.user_data['location_key'] 
     
     return await _show_category_menu(update, context, location_key, change_name)
 
@@ -159,11 +160,12 @@ async def handle_category_selection(update: Update, context: ContextTypes.DEFAUL
     
     subcats = CONFIG_OTHER['subcategories_by_category'].get(cat_key, [])
     if not subcats:
+        # Сценарій без підкатегорій: одразу до введення суми/опису
         await query.message.edit_text(f"✅ Категорія: **{cat_name}**\n\n💰 Введіть суму та опис:", parse_mode='Markdown')
         return WAITING_EXPENSE_INPUT
     
     keyboard = [
-        [InlineKeyboardButton(sub, callback_data=f"subcategory_{SUB_UKR_TO_ASCII.get(sub, sub)}")]
+        [InlineKeyboardButton(sub, callback_data=f"subcategory_{SUB_UKR_TO_ASCII.get(sub, sub.lower().replace(' ', '_'))}")]
         for sub in subcats
     ]
 
@@ -173,7 +175,6 @@ async def handle_category_selection(update: Update, context: ContextTypes.DEFAUL
     return WAITING_SUBCATEGORY
 
 # --- Вибір підкатегорії з особливістю для "Тех. працівники" ---
-# --- Вибір підкатегорії ---
 async def handle_subcategory_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -182,34 +183,50 @@ async def handle_subcategory_selection(update: Update, context: ContextTypes.DEF
     subcat_name = SUB_ASCII_TO_UKR.get(subcat_key, subcat_key)
     context.user_data['subcategory'] = subcat_name
     
-    # 1. 🚨 СПЕЦІАЛЬНИЙ ВИПАДОК: "Тех. працівники"
-    # Якщо ви хочете використовувати WAITING_PERSON_NAME лише для "Тех. працівники", 
-    # це має бути зроблено тут.
+    # 1. ✅ СПЕЦІАЛЬНИЙ ВИПАДОК: "Тех. працівники"
     if subcat_name == "Тех. працівники":
-        # ... (Ваша клавіатура для Олега, Лесі, Вови) ...
-        # ...
+        # ВИПРАВЛЕННЯ: Ініціалізуємо reply_markup тут, щоб уникнути UnboundLocalError
+        keyboard = [
+            [InlineKeyboardButton("Олег", callback_data="person_oleg")],
+            [InlineKeyboardButton("Леся", callback_data="person_lesya")],
+            [InlineKeyboardButton("Вова", callback_data="person_vova")],
+            [InlineKeyboardButton("Інший", callback_data="person_other")],
+            [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("👤 Оберіть працівника або введіть ім'я:", reply_markup=reply_markup)
         return WAITING_PERSON_NAME
 
-    # 2. 🔁 ВИПАДОК: Є ПІД-ПІДкатегорії (напр., "Відділ продажів" -> "Яна/Віра/Соня")
-    # Перевіряємо, чи є ключ підкатегорії у словнику subsubcategories_by_category
+    # 2. ✅ ВИПАДОК: Є ПІД-ПІДкатегорії (Перехід до WAITING_SUBSUBCATEGORY)
     if subcat_key in CONFIG_OTHER.get('subsubcategories_by_category', {}):
-        subsubs_dict = CONFIG_OTHER['subsubcategories_by_category'][subcat_key] # Це словник {ukr: ascii}
+        subsubs_dict = CONFIG_OTHER['subsubcategories_by_category'][subcat_key] 
         
+        # Перетворюємо словник {ukr: ascii} на список кнопок
         keyboard = [
-            [InlineKeyboardButton(subsub_ukr, callback_data=f"subsubcategory_{subsub_ascii}")]
-            for subsub_ukr, subsub_ascii in subsubs_dict.items() # Ітеруємо по елементах словника
+            [InlineKeyboardButton(ukr, callback_data=f"subsubcategory_{ascii_key}")]
+            for ascii_key, ukr in subsubs_dict.items() # Ітеруємо по елементах словника
         ]
+        
         keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(f"📂 Оберіть виконавця для '{subcat_name}':", reply_markup=reply_markup)
-        return WAITING_SUBSUBCATEGORY # <--- Використовуємо новий стан
+        return WAITING_SUBSUBCATEGORY
         
-    # 3. 🧾 СТАНДАРТНИЙ ВИПАДОК: Немає під-підкатегорій та не "Тех. працівники"
-    # Переходимо до вибору ФОПа
-    context.user_data['subsubcategory'] = '' # Встановлюємо порожнє значення
+    # 3. 🧾 СТАНДАРТНИЙ ВИПАДОК: Немає під-підкатегорій
+    context.user_data['subsubcategory'] = '' 
     return await ask_account_selection(update, context)
 
+async def handle_subsubcategory_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    subsub_key = query.data.split('_', 1)[-1]
+    subsub_ukr = SUBSUB_ASCII_TO_UKR.get(subsub_key, subsub_key) # Отримуємо назву
+    
+    context.user_data['subsubcategory'] = subsub_ukr 
+    
+    # Переходимо до вибору ФОПа
+    return await ask_account_selection(update, context)
 
 # --- Введення імені вручну або вибір ---
 async def handle_person_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -219,8 +236,9 @@ async def handle_person_selection(update: Update, context: ContextTypes.DEFAULT_
         await query.message.edit_text("👤 Введіть ім'я працівника:")
         return WAITING_PERSON_NAME
     else:
-        person_map = {"oleg": "Олег", "lesya": "Леся", "vova": "Вова"}
+        # Використовуємо більш універсальний спосіб, якщо person_map є у config
         person_key = query.data.split('_', 1)[-1]
+        person_map = {"oleg": "Олег", "lesya": "Леся", "vova": "Вова"} # Якщо немає в config
         context.user_data['person'] = person_map.get(person_key, person_key)
         return await ask_account_selection(update, context)
 
@@ -286,11 +304,22 @@ async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TY
                 msg += f"**Локація**: {context.user_data.get('location', '—')}\n"
                 msg += f"**Зміна**: {context.user_data.get('change', '—')}\n"
                 msg += f"**Категорія**: {context.user_data.get('category', '—')}\n"
-                msg += f"**Підкатегорія**: {context.user_data.get('subcategory', '—')}\n"
+                
+                # Додаємо Підкатегорію
+                subcat_info = context.user_data.get('subcategory', '—')
+                if subcat_info:
+                    msg += f"**Підкатегорія**: {subcat_info}\n"
+                
+                # Додаємо Під-підкатегорію
+                subsubcat_info = context.user_data.get('subsubcategory', '')
+                if subsubcat_info:
+                    msg += f"**Виконавець**: {subsubcat_info}\n"
+
                 if 'person' in context.user_data:
                     msg += f"**Працівник**: {context.user_data['person']}\n"
                 if 'account' in context.user_data:
                     msg += f"**ФОП**: {context.user_data['account']}\n"
+                    
             msg += f"**Сума**: {parsed['сума']} грн"
             if parsed.get('коментар'):
                 msg += f"\n**Коментар**: {parsed['коментар']}"
@@ -300,6 +329,7 @@ async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TY
             logging.error(f"❌ Помилка запису: {e}")
             await update.message.reply_text("❌ Помилка запису. Спробуйте ще раз.")
             return WAITING_EXPENSE_INPUT
+
     else:
         await update.message.reply_text("⚠️ Невірний формат. Спробуйте: `СУМА ОПИС`")
         return WAITING_EXPENSE_INPUT
@@ -308,26 +338,14 @@ async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TY
     await send_main_menu(update, context, "Операція завершена.")
     return ConversationHandler.END
 
-async def handle_subsubcategory_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    subsub_key = query.data.split('_', 1)[-1]
-    
-    # Знаходимо українську назву для збереження (за бажанням)
-    subsub_ukr = next((ukr for ukr, ascii_key in SUBSUB_UKR_TO_ASCII.items() if ascii_key == subsub_key), subsub_key)
-    
-    context.user_data['subsubcategory'] = subsub_ukr # Зберігаємо українську назву
-    
-    # 🚨 ВИПРАВЛЕННЯ: Тепер, після вибору, викликаємо наступний крок (Вибір ФОПа)
-    return await ask_account_selection(update, context)
-
+# Допоміжна функція (для уникнення дублювання коду)
 async def _show_category_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, location_key: str, change_name: str) -> int:
     """Допоміжна функція для відображення меню категорій."""
+    query = update.callback_query
     
-    if location_key == 'Transfer':
-        # Для Transfer беремо категорії з 'categories_by_location'
-        categories_dict = CONFIG_OTHER['categories_by_location'].get('Transfer', {})
+    if location_key == 'Transfer' or not context.user_data.get('changes_map'):
+        # Для Transfer або якщо змін не було, беремо категорії з 'categories_by_location'
+        categories_dict = CONFIG_OTHER['categories_by_location'].get(location_key, {})
         categories_list = list(categories_dict.keys())
     else:
         # Для інших беремо категорії з 'categories_by_change'
@@ -343,7 +361,7 @@ async def _show_category_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     summary += f"**Локація**: {context.user_data.get('location')}\n"
     summary += f"**Зміна/Тип**: {change_name}\n\n"
     
-    await update.callback_query.message.edit_text(
+    await query.message.edit_text(
         f"📑 Оберіть категорію:\n\n{summary}", 
         reply_markup=reply_markup, 
         parse_mode='Markdown'
