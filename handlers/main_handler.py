@@ -34,6 +34,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "➕ Додати витрату":
         # Це має обробляти ConversationHandler, але на всяк випадок перенаправимо на старт
         return await ask_expense_date(update, context)
+    elif text == "📊 Звіти":
+        # Обробка кнопки "Звіти" з головного меню
+        await send_reports_menu(update)
+        return ConversationHandler.END
     
     # ... (інша логіка) ...
 
