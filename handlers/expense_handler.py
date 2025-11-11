@@ -350,11 +350,16 @@ async def _show_category_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = update.callback_query
     
     # Визначаємо, звідки брати категорії
-    if location_key == 'Transfer' or not context.user_data.get('changes_map'):
+    
+    # Спроба 1: Використовуємо категорії, прив'язані до Зміни (Change).
+    # Якщо change_name є ключем у categories_by_change, використовуємо його.
+    categories_list = CONFIG_OTHER['categories_by_change'].get(change_name, [])
+    
+    if not categories_list:
+        # Спроба 2: Якщо зміна не має окремих категорій, 
+        # використовуємо категорії, прив'язані до Локації (Location).
         categories_dict = CONFIG_OTHER['categories_by_location'].get(location_key, {})
         categories_list = list(categories_dict.keys())
-    else:
-        categories_list = CONFIG_OTHER['categories_by_change'].get(change_name, [])
         
     # Формуємо клавіатуру
     keyboard = [[InlineKeyboardButton(cat, callback_data=f"category_{CAT_UKR_TO_ASCII.get(cat, cat.lower().replace(' ', '_'))}")] for cat in categories_list]
