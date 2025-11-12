@@ -263,3 +263,79 @@ def generate_daily_report(expense_type=None):
         report_lines.append(f"  *Всього по ФОП: {fop_total:.2f} грн*")
     report_lines.append(f"──────────────\n💰 *Загалом: {grand_total:.2f} грн*")
     return "\n".join(report_lines), 'Markdown'
+
+
+def generate_cashflow_report(period_name: str):
+    """
+    Звіт про кешфлоу (рух грошей) по рахунках за період:
+    - По кожному рахунку: надходження, витрати, баланс
+    - Загальний підсумок
+    """
+    try:
+        period_lower = period_name.strip().lower()
+        
+        # Словник для зберігання даних по рахунках
+        # {account: {'income': amount, 'expense': amount}}
+        accounts_flow = defaultdict(lambda: {'income': 0.0, 'expense': 0.0})
+        
+        sheet = SHEET_MAP['other']
+        rows = sheet.get_all_records(expected_headers=OTHER_HEADERS)
+        logging.info(f"Cashflow звіт '{period_name}': завантажено {len(rows)} рядків")
+        
+        for row in rows:
+            period = str(row.get("Період", "")).strip().lower()
+            type_ = str(row.get("Група", "")).strip().lower()
+            account = str(row.get("Рахунок", "Невідомо")).strip()
+            
+            if period == period_lower:
+                raw_sum = row.get("Сума", "")
+                amount = parse_amount(raw_sum)
+                
+                if amount > 0:
+                    if "дохід" in type_:
+                        accounts_flow[account]['income'] += amount
+                    elif "розхід" in type_:
+                        accounts_flow[account]['expense'] += amount
+        
+        # Формування звіту
+        report_lines = [
+            f"💰 *Звіт про кешфлоу: {period_name}*\n",
+            f"──────────────────────\n"
+        ]
+        
+        total_income = 0.0
+        total_expense = 0.0
+        
+        # Звіт по кожному рахунку
+        for account in sorted(accounts_flow.keys()):
+            data = accounts_flow[account]
+            income = data['income']
+            expense = data['expense']
+            balance = income - expense
+            
+            total_income += income
+            total_expense += expense
+            
+            # Емодзі для балансу
+            balance_emoji = "🟢" if balance > 0 else "🔴" if balance < 0 else "⚪"
+            
+            report_lines.append(f"💳 *{account}*")
+            report_lines.append(f"  ↗️ Надходження: {income:,.2f} грн")
+            report_lines.append(f"  ↘️ Витрати: {expense:,.2f} грн")
+            report_lines.append(f"  {balance_emoji} Баланс: {balance:,.2f} грн\n")
+        
+        # Загальний підсумок
+        total_balance = total_income - total_expense
+        report_lines.append("──────────────────────")
+        report_lines.append("📊 *ЗАГАЛОМ:*")
+        report_lines.append(f"  ↗️ Всі надходження: {total_income:,.2f} грн")
+        report_lines.append(f"  ↘️ Всі витрати: {total_expense:,.2f} грн")
+        report_lines.append(f"  💰 Загальний баланс: {total_balance:,.2f} грн")
+        
+        report = "\n".join(report_lines)
+        logging.info(f"Cashflow '{period_name}': надходження={total_income}, витрати={total_expense}")
+        return report, 'Markdown'
+        
+    except Exception as e:
+        logging.exception("Помилка у generate_cashflow_report")
+        return f"❌ Помилка: {e}", None

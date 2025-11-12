@@ -17,7 +17,7 @@ from config import (
 from handlers.expense_handler import ask_expense_date 
 # ✅ Тепер handle_back_to_main імпортується з utils (фікс циклічного імпорту)
 from handlers.utils import send_main_menu, handle_back_to_main 
-from handlers.report_handler import send_reports_menu, show_period_selection, handle_period_report
+from handlers.report_handler import send_reports_menu, show_period_selection, handle_period_report, show_cashflow_period_selection, handle_cashflow_report
 from reports import generate_daily_report, generate_camp_summary
 
 
@@ -34,10 +34,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "➕ Додати витрату":
         # Це має обробляти ConversationHandler, але на всяк випадок перенаправимо на старт
         return await ask_expense_date(update, context)
-    elif text == "📊 Звіти":
-        # Обробка кнопки "Звіти" з головного меню
-        await send_reports_menu(update)
-        return ConversationHandler.END
     
     # ... (інша логіка) ...
 
@@ -64,6 +60,13 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif data.startswith("period_report_"):
         return await handle_period_report(update, context)
+    
+    # --- Звіт кешфлоу ---
+    elif data == "report_cashflow":
+        return await show_cashflow_period_selection(update, context)
+    
+    elif data.startswith("cashflow_report_"):
+        return await handle_cashflow_report(update, context)
     
     # --- Назад до меню звітів ---
     elif data == "back_to_reports":
