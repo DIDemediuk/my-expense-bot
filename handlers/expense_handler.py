@@ -115,7 +115,7 @@ async def handle_expense_type_selection(update: Update, context: ContextTypes.DE
     elif expense_type == 'other':
         # Починаємо з вибору Періоду
         keyboard = [[InlineKeyboardButton(v, callback_data=f"period_{k}")] for k, v in CONFIG_OTHER['periods'].items()]
-        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_category")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("📆 Оберіть період:", reply_markup=reply_markup)
         return WAITING_PERIOD
@@ -211,7 +211,7 @@ async def handle_dividends_account_selection(update: Update, context: ContextTyp
             [InlineKeyboardButton(cat_name, callback_data=f"dividends_category_{cat_key}")]
             for cat_key, cat_name in categories.items()
         ]
-        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_category")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(
             f"✅ Власник: **{owner_name}**\n\n📂 Оберіть категорію:",
@@ -297,14 +297,18 @@ async def handle_dividends_amount_input(update: Update, context: ContextTypes.DE
 async def handle_period_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    period_key = query.data.split('_', 1)[-1]
     
+    # Обробка кнопки "Назад" - повертаємо до вибору типу
+    if query.data == "back_to_type":
+        return await show_expense_type_selection(update, context, context.user_data.get('selected_date', ''))
+    
+    period_key = query.data.split('_', 1)[-1]
     context.user_data['period_key'] = period_key 
     context.user_data['period'] = CONFIG_OTHER['periods'][period_key]
     
     locations = CONFIG_OTHER['locations_by_period'].get(period_key, [])
     keyboard = [[InlineKeyboardButton(CONFIG_OTHER['locations'][loc], callback_data=f"location_{loc}")] for loc in locations]
-    keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+    keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_type")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.edit_text("📍 Оберіть локацію:", reply_markup=reply_markup)
     return WAITING_LOCATION
@@ -312,6 +316,16 @@ async def handle_period_selection(update: Update, context: ContextTypes.DEFAULT_
 async def handle_location_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
+    # Обробка кнопки "Назад" - повертаємо до вибору періоду
+    if query.data == "back_to_period":
+        period_key = context.user_data.get('period_key')
+        keyboard = [[InlineKeyboardButton(v, callback_data=f"period_{k}")] for k, v in CONFIG_OTHER['periods'].items()]
+        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_category")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("📆 Оберіть період:", reply_markup=reply_markup)
+        return WAITING_PERIOD
+    
     location_key = query.data.split('_', 1)[-1]
     context.user_data['location_key'] = location_key 
     context.user_data['location'] = CONFIG_OTHER['locations'][location_key]
@@ -332,7 +346,7 @@ async def handle_location_selection(update: Update, context: ContextTypes.DEFAUL
     else:
         # --- Стандартний сценарій: Відображаємо Зміни ---
         keyboard = [[InlineKeyboardButton(CHANGE_ASCII_TO_UKR[ch], callback_data=f"change_{ch}")] for ch in changes_map]
-        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_period")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("👥 Оберіть зміну/особу:", reply_markup=reply_markup)
         return WAITING_CHANGE
@@ -340,6 +354,17 @@ async def handle_location_selection(update: Update, context: ContextTypes.DEFAUL
 async def handle_change_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
+    # Обробка кнопки "Назад" - повертаємо до вибору локації
+    if query.data == "back_to_location":
+        period_key = context.user_data.get('period_key')
+        locations = CONFIG_OTHER['locations_by_period'].get(period_key, [])
+        keyboard = [[InlineKeyboardButton(CONFIG_OTHER['locations'][loc], callback_data=f"location_{loc}")] for loc in locations]
+        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_period")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("📍 Оберіть локацію:", reply_markup=reply_markup)
+        return WAITING_LOCATION
+    
     change_key = query.data.split('_', 1)[-1]
     change_name = CHANGE_ASCII_TO_UKR.get(change_key, change_key) 
     context.user_data['change'] = change_name
@@ -351,6 +376,27 @@ async def handle_change_selection(update: Update, context: ContextTypes.DEFAULT_
 async def handle_category_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
+    # Обробка кнопки "Назад" - повертаємо до вибору зміни або локації
+    if query.data == "back_to_change":
+        location_key = context.user_data.get('location_key')
+        period_key = context.user_data.get('period_key')
+        changes_map = CONFIG_OTHER['changes_by_location_period'].get(period_key, {}).get(location_key, [])
+        if changes_map:
+            keyboard = [[InlineKeyboardButton(CHANGE_ASCII_TO_UKR[ch], callback_data=f"change_{ch}")] for ch in changes_map]
+            keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_location")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.message.edit_text("👥 Оберіть зміну/особу:", reply_markup=reply_markup)
+            return WAITING_CHANGE
+        else:
+            # Якщо змін немає, повертаємося до локації
+            locations = CONFIG_OTHER['locations_by_period'].get(period_key, [])
+            keyboard = [[InlineKeyboardButton(CONFIG_OTHER['locations'][loc], callback_data=f"location_{loc}")] for loc in locations]
+            keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_period")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.message.edit_text("📍 Оберіть локацію:", reply_markup=reply_markup)
+            return WAITING_LOCATION
+    
     cat_key = query.data.split('_', 1)[-1]
     cat_name = CAT_ASCII_TO_UKR.get(cat_key, cat_key)
     context.user_data['category'] = cat_name
@@ -366,7 +412,7 @@ async def handle_category_selection(update: Update, context: ContextTypes.DEFAUL
         for sub in subcats
     ]
 
-    keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+    keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_change")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.edit_text(f"📂 Підкатегорія для '{cat_name}':", reply_markup=reply_markup)
     return WAITING_SUBCATEGORY
@@ -375,6 +421,12 @@ async def handle_category_selection(update: Update, context: ContextTypes.DEFAUL
 async def handle_subcategory_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
+    # Обробка кнопки "Назад" - повертаємо до вибору категорії
+    if query.data == "back_to_category":
+        location_key = context.user_data.get('location_key')
+        change_name = context.user_data.get('change', '')
+        return await _show_category_menu(update, context, location_key, change_name)
     
     subcat_key = query.data.split('_', 1)[-1]
     subcat_name = SUB_ASCII_TO_UKR.get(subcat_key, subcat_key)
@@ -390,7 +442,7 @@ async def handle_subcategory_selection(update: Update, context: ContextTypes.DEF
             person_ascii = SUBSUB_UKR_TO_ASCII.get(person_name, person_name.lower().replace(' ', '_'))
             keyboard.append([InlineKeyboardButton(person_name, callback_data=f"subsubcategory_{person_ascii}")])
         
-        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_category")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(f"� Оберіть виконавця для '{subcat_name}':", reply_markup=reply_markup)
         return WAITING_SUBSUBCATEGORY
@@ -404,6 +456,20 @@ async def handle_subcategory_selection(update: Update, context: ContextTypes.DEF
 async def handle_subsubcategory_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
+    # Обробка кнопки "Назад" - повертаємо до вибору підкатегорії
+    if query.data == "back_to_subcategory":
+        cat_key = CAT_UKR_TO_ASCII.get(context.user_data.get('category', ''), '')
+        subcats = CONFIG_OTHER['subcategories_by_category'].get(cat_key, [])
+        keyboard = [
+            [InlineKeyboardButton(sub, callback_data=f"subcategory_{SUB_UKR_TO_ASCII.get(sub, sub.lower().replace(' ', '_'))}")]
+            for sub in subcats
+        ]
+        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_change")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        cat_name = context.user_data.get('category', '')
+        await query.message.edit_text(f"📂 Підкатегорія для '{cat_name}':", reply_markup=reply_markup)
+        return WAITING_SUBCATEGORY
 
     subsub_key = query.data.split('_', 1)[-1]
     subsub_ukr = SUBSUB_ASCII_TO_UKR.get(subsub_key, subsub_key) 
@@ -435,12 +501,20 @@ async def handle_manual_person_input(update: Update, context: ContextTypes.DEFAU
 
 # --- Вибір ФОПа ---
 async def ask_account_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Визначаємо, звідки повертатися - з subsubcategory або subcategory
+    if context.user_data.get('subsubcategory'):
+        back_callback = "back_to_subcategory"
+    elif context.user_data.get('subcategory'):
+        back_callback = "back_to_category"
+    else:
+        back_callback = "back_main"
+    
     keyboard = [
         [InlineKeyboardButton("ФОП №1 Радул І.І.", callback_data="account_1")],
         [InlineKeyboardButton("ФОП №2 Радул Я.Ю.", callback_data="account_2")],
         [InlineKeyboardButton("ФОП №3 Скидан Х.С.", callback_data="account_3")],
         [InlineKeyboardButton("Інший", callback_data="account_other")],
-        [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
+        [InlineKeyboardButton("⬅️ Назад", callback_data=back_callback)]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     text = "💼 Оберіть ФОП:"
@@ -453,6 +527,42 @@ async def ask_account_selection(update: Update, context: ContextTypes.DEFAULT_TY
 async def handle_account_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
+    # Обробка кнопки "Назад" - повертаємо до попереднього кроку
+    if query.data in ("back_to_subcategory", "back_to_category"):
+        if query.data == "back_to_subcategory" and context.user_data.get('subsubcategory'):
+            # Повертаємося до вибору підпідкатегорії
+            subcat_key = SUB_UKR_TO_ASCII.get(context.user_data.get('subcategory', ''), '')
+            if subcat_key in CONFIG_OTHER.get('subsubcategories_by_category', {}):
+                subsubs_list = CONFIG_OTHER['subsubcategories_by_category'][subcat_key]
+                keyboard = []
+                for person_name in subsubs_list:
+                    person_ascii = SUBSUB_UKR_TO_ASCII.get(person_name, person_name.lower().replace(' ', '_'))
+                    keyboard.append([InlineKeyboardButton(person_name, callback_data=f"subsubcategory_{person_ascii}")])
+                keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_category")])
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                subcat_name = context.user_data.get('subcategory', '')
+                await query.message.edit_text(f"👤 Оберіть виконавця для '{subcat_name}':", reply_markup=reply_markup)
+                return WAITING_SUBSUBCATEGORY
+        # Повертаємося до вибору підкатегорії або категорії
+        cat_key = CAT_UKR_TO_ASCII.get(context.user_data.get('category', ''), '')
+        subcats = CONFIG_OTHER['subcategories_by_category'].get(cat_key, [])
+        if subcats:
+            keyboard = [
+                [InlineKeyboardButton(sub, callback_data=f"subcategory_{SUB_UKR_TO_ASCII.get(sub, sub.lower().replace(' ', '_'))}")]
+                for sub in subcats
+            ]
+            keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_change")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            cat_name = context.user_data.get('category', '')
+            await query.message.edit_text(f"📂 Підкатегорія для '{cat_name}':", reply_markup=reply_markup)
+            return WAITING_SUBCATEGORY
+        else:
+            # Якщо немає підкатегорій, повертаємося до категорії
+            location_key = context.user_data.get('location_key')
+            change_name = context.user_data.get('change', '')
+            return await _show_category_menu(update, context, location_key, change_name)
+    
     if query.data == "account_other":
         await query.message.edit_text("💼 Введіть назву ФОПа:")
         return WAITING_ACCOUNT_INPUT

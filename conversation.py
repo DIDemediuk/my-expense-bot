@@ -107,27 +107,27 @@ expense_conv = ConversationHandler(
         ],
 
         WAITING_PERIOD: [
-            CallbackQueryHandler(handle_period_selection, pattern="^period_"),
+            CallbackQueryHandler(handle_period_selection, pattern="^(period_|back_to_type)"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_LOCATION: [
-            CallbackQueryHandler(handle_location_selection, pattern="^location_"),
+            CallbackQueryHandler(handle_location_selection, pattern="^(location_|back_to_period)"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_CHANGE: [
-            CallbackQueryHandler(handle_change_selection, pattern="^change_"),
+            CallbackQueryHandler(handle_change_selection, pattern="^(change_|back_to_location)"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_CATEGORY: [
-            CallbackQueryHandler(handle_category_selection, pattern="^category_.*$"),
+            CallbackQueryHandler(handle_category_selection, pattern="^(category_.*|back_to_change)$"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_SUBCATEGORY: [
-            CallbackQueryHandler(handle_subcategory_selection, pattern="^subcategory_.*$"),
+            CallbackQueryHandler(handle_subcategory_selection, pattern="^(subcategory_.*|back_to_category)$"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_SUBSUBCATEGORY: [  # 🧩 додано
-            CallbackQueryHandler(handle_subsubcategory_selection, pattern="^subsubcategory_.*$"),
+            CallbackQueryHandler(handle_subsubcategory_selection, pattern="^(subsubcategory_.*|back_to_subcategory)$"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_PERSON_NAME: [
@@ -137,6 +137,8 @@ expense_conv = ConversationHandler(
         ],
         WAITING_ACCOUNT_SELECTION: [
             CallbackQueryHandler(handle_account_selection, pattern="^account_.*$"),  # ✅ фікс
+            CallbackQueryHandler(handle_subsubcategory_selection, pattern="^back_to_subcategory$"),
+            CallbackQueryHandler(handle_subcategory_selection, pattern="^back_to_category$"),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
         WAITING_ACCOUNT_INPUT: [
