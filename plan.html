@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Планування сезону</title>
+    <style>
+      /* Стилі залишаються як у попередній версії */
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        color: #333;
+        line-height: 1.6;
+      }
+      h1 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 10px;
+        font-size: 2.5em;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      }
+      .subtitle {
+        text-align: center;
+        color: #7f8c8d;
+        margin-bottom: 30px;
+        font-style: italic;
+      }
+      .tabs-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+        background: white;
+        border-radius: 10px 10px 0 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      .tab-btn {
+        padding: 15px 30px;
+        background: #ecf0f1;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        color: #2c3e50;
+        transition: all 0.3s ease;
+        border-radius: 10px 10px 0 0;
+      }
+      .tab-btn:hover {
+        background: #d5dbdb;
+      }
+      .tab-btn.active {
+        background: #3498db;
+        color: white;
+      }
+      .tab-content {
+        display: none;
+        background: white;
+        padding: 25px;
+        border-radius: 0 10px 10px 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .form-section h2, .table-section h2 {
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+      }
+      /* Стилі для динамічних блоків */
+      .location-block {
+          border: 3px solid #f39c12; 
+          padding: 20px;
+          margin-top: 25px;
+          border-radius: 8px;
+          background: #fff8eb;
+      }
+      .shift-details-container {
+        border: 2px solid #3498db;
+        padding: 20px;
+        margin-top: 20px;
+        border-radius: 8px;
+        background: #ecf0f1;
+      }
+      .shift-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #bdc3c7;
+      }
+      .shift-header h3 {
+        color: #2c3e50;
+        margin: 0;
+      }
+      .team-member-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 50px;
+        gap: 10px;
+        margin-bottom: 5px;
+        align-items: center;
+      }
+      .team-member-row button {
+        padding: 5px;
+        margin: 0;
+      }
+      .team-members-wrapper {
+        border: 1px dashed #7f8c8d;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+      }
+      .calculated-output {
+        font-weight: bold;
+        color: #2980b9;
+      }
+      
+      label {
+        display: block;
+        margin: 12px 0 5px;
+        font-weight: 600;
+        color: #555;
+      }
+      input, select, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #bdc3c7;
+        border-radius: 6px;
+        box-sizing: border-box;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+      input:focus, select:focus, textarea:focus {
+        border-color: #3498db;
+        outline: none;
+      }
+      button {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        margin: 5px;
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      }
+      .delete-btn {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+      }
+      .delete-btn:hover {
+        background: linear-gradient(135deg, #c0392b, #a93226);
+      }
+      .edit-btn {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+      }
+      .edit-btn:hover {
+        background: linear-gradient(135deg, #e67e22, #d68910);
+      }
+      .clear-btn {
+        background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+      }
+      .refresh-btn {
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th, td {
+        padding: 8px 6px; /* Зменшено padding для компактності */
+        text-align: left;
+        border-bottom: 1px solid #ecf0f1;
+        white-space: nowrap; 
+        font-size: 14px; /* Зменшено шрифт */
+      }
+      th {
+        background: linear-gradient(135deg, #34495e, #2c3e50);
+        color: white;
+        font-weight: bold;
+      }
+      tr:nth-child(even) {
+        background: #f8f9fa;
+      }
+      tr:hover {
+        background: #e8f4fd;
+      }
+      .error {
+        color: #e74c3c;
+        background: #fdf2f2;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 10px 0;
+        border-left: 4px solid #e74c3c;
+      }
+      .success {
+        color: #27ae60;
+        background: #f0f9f0;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 10px 0;
+        border-left: 4px solid #27ae60;
+      }
+      .hidden {
+        display: none;
+      }
+      .loading {
+        text-align: center;
+        color: #7f8c8d;
+        font-style: italic;
+      }
+      /* Стилі для блоку собівартості */
+      .summary-block {
+          margin-top: 25px;
+          padding: 15px;
+          border: 1px solid #2980b9;
+          border-radius: 6px;
+          background: #d4eaf7;
+      }
+      .summary-block h4 {
+          color: #2c3e50;
+          margin-top: 0;
+          border-bottom: 1px dashed #2980b9;
+          padding-bottom: 5px;
+      }
+      .summary-item {
+          display: flex;
+          justify-content: space-between;
+          padding: 3px 0;
+      }
+      .summary-item.total {
+          font-weight: bold;
+          font-size: 1.1em;
+          color: #c0392b;
+          border-top: 1px solid #c0392b;
+          margin-top: 5px;
+          padding-top: 5px;
+      }
+      /* Стилі для Прогнозних Операційних Витрат */
+      .op-cost-block {
+          border: 1px dashed #27ae60;
+          padding: 15px;
+          border-radius: 6px;
+          background: #e6f7e9;
+          margin-bottom: 20px;
+      }
+      
+      /* Стилі для таблиці Прогноз VS Факт */
+      .vs-row-plan {
+          font-weight: bold;
+          background-color: #f0f8ff; /* Світло-блакитний для прогнозу */
+      }
+      .vs-row-fact {
+          color: #16a085; /* Зелений для факту */
+          font-weight: 600;
+          border-top: 1px solid #bdc3c7;
+      }
+      .vs-profit {
+          color: #c0392b;
+      }
+
+      /* НОВІ СТИЛІ ДЛЯ РІЗНИЦЬ */
+      .positive-diff {
+        color: #27ae60;
+        font-weight: bold;
+      }
+      .negative-diff {
+        color: #e74c3c;
+        font-weight: bold;
+      }
+      .zero-diff {
+        color: #7f8c8d;
+        font-style: italic;
+      }
+
+      /* СТИЛІ ДЛЯ ЗВЕДЕНОГО ЗВІТУ ПО СЕЗОНУ */
+      .season-summary-report {
+        border: 2px solid #2c3e50;
+        padding: 20px;
+        border-radius: 8px;
+        background: #f7f9fb;
+        margin-top: 30px;
+      }
+      .season-summary-report h3 {
+        color: #2c3e50;
+        border-bottom: 2px solid #e74c3c;
+        padding-bottom: 10px;
+      }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-top: 15px;
+      }
+      .summary-col-financial .summary-item {
+        font-size: 1.1em;
+        padding: 8px 0;
+        border-bottom: 1px dashed #ccc;
+      }
+      .summary-col-cost .summary-item {
+        font-size: 1em;
+        padding: 5px 0;
+      }
+      .summary-col-financial .summary-item.total {
+          color: #e74c3c;
+          font-size: 1.3em;
+          border-top: 2px solid #e74c3c;
+          padding-top: 10px;
+          margin-top: 10px;
+      }
+      .summary-col-cost h4 {
+        color: #27ae60;
+        margin-top: 0;
+        border-bottom: 1px solid #27ae60;
+        padding-bottom: 5px;
+      }
+
+      /* НОВИЙ СТИЛЬ ДЛЯ ГОРИЗОНТАЛЬНОГО ПРОКРУТКИ ТАБЛИЦІ */
+      .plans-container {
+        overflow-x: auto;
+        margin-top: 15px;
+      }
+      .plans-table-wrapper {
+        min-width: 1200px; /* Мінімальна ширина для таблиці */
+      }
+      /* НОВІ СТИЛІ ДЛЯ АНАЛІТИЧНОГО ДАШБОРДУ */
+  .analytics-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+  }
+  .kpi-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  .kpi-title {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-bottom: 10px;
+  }
+  .kpi-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  .kpi-diff {
+    font-size: 12px;
+    margin-top: 5px;
+  }
+  .season-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+  }
+  .season-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid #3498db;
+  }
+  .season-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .season-name {
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  .season-actions {
+    display: flex;
+    gap: 5px;
+  }
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    padding: 2px 0;
+    border-bottom: 1px solid #ecf0f1;
+  }
+  .metric-label {
+    font-size: 12px;
+    color: #7f8c8d;
+  }
+  .metric-value {
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .overall-kpi {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+  }
+  .kpi-item {
+    text-align: center;
+  }
+  .kpi-label {
+    font-size: 12px;
+    color: #7f8c8d;
+  }
+  .kpi-number {
+    font-size: 20px;
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  /* НОВІ СТИЛІ ДЛЯ РІЗНИЦЬ */
+  .positive-diff {
+    color: #27ae60; /* Зелений */
+    font-weight: bold;
+  }
+  .negative-diff {
+    color: #e74c3c; /* Червоний */
+    font-weight: bold;
+  }
+  .zero-diff {
+    color: #7f8c8d;
+    font-style: italic;
+  }
+  /* НОВІ СТИЛІ ДЛЯ МОДАЛЬНОГО ВІКНА */
+  .modal {
+      display: none; 
+      position: fixed; 
+      z-index: 1000; 
+      left: 0;
+      top: 0;
+      width: 100%; 
+      height: 100%; 
+      overflow: auto; 
+      background-color: rgba(0,0,0,0.4); 
+  }
+
+  .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto; /* 5% від верху та центру */
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      width: 90%;
+      max-width: 1200px; 
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+  }
+
+  .close-button {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+  }
+
+  .close-button:hover,
+  .close-button:focus {
+      color: #333;
+      text-decoration: none;
+      cursor: pointer;
+  }
+
+  .details-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #f9f9f9;
+  }
+
+  .details-section h4 {
+      color: #3498db;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+      margin-top: 0;
+      margin-bottom: 15px;
+  }
+
+  .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+  }
+
+  .details-table th, .details-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      font-size: 13px;
+  }
+
+  .details-table th {
+      background-color: #f2f2f2;
+      color: #555;
+      font-weight: 600;
+  }
+
+  .details-table .diff-cell {
+      font-weight: bold;
+  }
+
+  /* Нові стилі для розширеної деталізації */
+  .breakdown-table th {
+      background: linear-gradient(135deg, #34495e, #2c3e50);
+      color: white;
+  }
+  .breakdown-table tr:nth-child(even) {
+      background: #f8f9fa;
+  }
+  .breakdown-table tr:hover {
+      background: #e8f4fd;
+  }
+  .category-group {
+      background: #e8f4fd;
+      font-weight: bold;
+      border-left: 4px solid #3498db;
+  }
+    </style>
+  </head>
+  <body>
+    <h1>Планування сезону</h1>
+    <p class="subtitle">Додай або редагуй плани сезонів (множина локацій/змін). Дані зберігаються в аркушах "Plans" та "ShiftDetails". Фактичні витрати обчислюються динамічно з аркуша "ShiftExpenses".</p>
+    
+    <div class="tabs-container">
+      
+      <button class="tab-btn" onclick="switchTab('list')">Існуючі Сезони (Прогноз VS Факт)</button>
+      <button class="tab-btn active" onclick="switchTab('add')">Додати/Редагувати Сезон</button>
+      
+    </div>
+
+    <div id="add-tab" class="tab-content active">
+      <div class="form-section">
+        <h2>Загальні дані сезону та прогнозні витрати 💰</h2>
+        <form id="planForm">
+          <input type="hidden" id="planIndex" value="-1">
+          <input type="hidden" id="opCostPerChild" value="0">
+          <input type="hidden" id="totalChildren" value="0">
+
+          <label for="planName">Назва Сезону:</label>
+          <input type="text" id="planName" placeholder="e.g., Осінь 2025" required>
+          
+          <div class="op-cost-block">
+              <h3 style="margin-top: 0; color: #27ae60;">Прогнозні Операційні Витрати (на весь сезон)</h3>
+              <p class="subtitle" style="margin-bottom: 5px;">Ці витрати будуть розподілені на всі заплановані путівки.</p>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                <div>
+                  <label for="advertisingCost">Реклама (грн):</label>
+                  <input type="number" id="advertisingCost" class="op-cost-input" step="0.01" value="0" required>
+                </div>
+                <div>
+                  <label for="salesManagerCost">Оплата менеджерів (грн):</label>
+                  <input type="number" id="salesManagerCost" class="op-cost-input" step="0.01" value="0" required>
+                </div>
+                <div>
+                  <label for="seasonLaunchCost">Запуск сезону (грн):</label>
+                  <input type="number" id="seasonLaunchCost" class="op-cost-input" step="0.01" value="0" required>
+                </div>
+              </div>
+          </div>
+          
+          <hr>
+          <h2>Деталі локацій та змін 🏕️</h2>
+          <div id="locationsContainer">
+            </div>
+          <button type="button" onclick="addLocationBlock()">+ Додати Локацію</button>
+
+          <hr>
+          
+          <div class="season-summary-report">
+            <h3>📈 Зведений Звіт по Сезону (Прогноз)</h3>
+            <div class="summary-grid">
+              
+              <div class="summary-col-financial">
+                <h4>Фінансові Показники:</h4>
+                <div class="summary-item">
+                    <span>Загальний Дохід (Прогноз):</span>
+                    <span id="totalRevenueDisplay" class="calculated-output">0.00 грн</span>
+                </div>
+                
+                <h4 style="margin-top: 15px; color: #3498db; border-bottom: 1px dashed #3498db; padding-bottom: 5px;">
+                    Деталізація Прямих Витрат:
+                </h4>
+                <div style="padding-left: 10px;">
+                    <div class="summary-item">
+                        <span>ЗП команди (Сезон):</span>
+                        <span id="aggSalaryCostDisplay" class="calculated-output">0.00 грн</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Проживання команди (Сезон):</span>
+                        <span id="aggLivingTeamCostDisplay" class="calculated-output">0.00 грн</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Харчування дітей (Сезон):</span>
+                        <span id="aggFoodChildCostDisplay" class="calculated-output">0.00 грн</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Програма + Дод. витрати (Сезон):</span>
+                        <span id="aggProgramExtraCostDisplay" class="calculated-output">0.00 грн</span>
+                    </div>
+                </div>
+                <div class="summary-item" style="border-top: 1px solid #ccc; font-weight: bold; margin-top: 5px; padding-top: 5px;">
+                    <span>✅ ВСЬОГО Прямі Витрати:</span>
+                    <span id="totalDirectCostDisplay" class="calculated-output">0.00 грн</span>
+                </div>
+
+                <div class="summary-item">
+                    <span>Загальні Операційні Витрати:</span>
+                    <span id="totalOpCostDisplay" class="calculated-output">0.00 грн</span>
+                </div>
+                <div class="summary-item">
+                    <span>ВСЬОГО Витрат (Прямі + Опер.):</span>
+                    <span id="totalCostDisplay" class="calculated-output">0.00 грн</span>
+                </div>
+                <div class="summary-item total">
+                    <span>Чистий Прибуток (Прогноз):</span>
+                    <span id="totalProfitDisplay" class="calculated-output">0.00 грн</span>
+                </div>
+                <div class="summary-item total" style="color: #2980b9; border-color: #2980b9;">
+                    <span>Рентабельність (Прибуток/Дохід):</span>
+                    <span id="profitMarginDisplay" class="calculated-output">0.00%</span>
+                </div>
+              </div>
+              
+              <div class="summary-col-cost">
+                <h4>Середня собівартість путівки по Табору:</h4>
+                <div class="summary-item">
+                    <span>ЗП команди на дитину:</span> 
+                    <span id="avgSalaryPerChild" class="calculated-output">0.00 грн</span>
+                </div>
+                <div class="summary-item">
+                    <span>Проживання команди на дитину:</span> 
+                    <span id="avgLivingTeamPerChild" class="calculated-output">0.00 грн</span>
+                </div>
+                <div class="summary-item">
+                    <span>Харчування (дитина):</span> 
+                    <span id="avgFoodChildPerChild" class="calculated-output">0.00 грн</span>
+                </div>
+                <div class="summary-item">
+                    <span>Програма + Дод. витрати на дитину:</span> 
+                    <span id="avgOtherCostPerChild" class="calculated-output">0.00 грн</span>
+                </div>
+                <div class="summary-item total">
+                    <span>Собівартість путівки (Без Опер. Витрат):</span> 
+                    <span id="avgCostPriceNoOpCost" class="calculated-output">0.00 грн</span>
+                </div>
+                <div class="summary-item total" style="color: #27ae60; border-color: #27ae60;">
+                    <span>Частка Опер. Витрат на дитину:</span> 
+                    <span id="opCostPerChildDisplay" class="calculated-output">0.00 грн</span>
+                </div>
+                <div class="summary-item total" style="color: #f39c12; border-color: #f39c12;">
+                    <span>Собівартість путівки (З Опер. Витратами):</span> 
+                    <span id="avgCostPriceWithOpCost" class="calculated-output">0.00 грн</span>
+                </div>
+              </div>
+
+              <div class="summary-col-info">
+                  <h4>Додаткова Інформація:</h4>
+                  <div class="summary-item">
+                      <span>Кількість запланованих дітей:</span>
+                      <span id="totalChildrenDisplay" class="calculated-output">0</span>
+                  </div>
+                  <div class="summary-item">
+                      <span>Середня вартість путівки:</span>
+                      <span id="avgRevenuePerChild" class="calculated-output">0.00 грн</span>
+                  </div>
+              </div>
+
+            </div>
+          </div>
+          
+          <div style="margin-top: 30px;">
+            <button type="submit" id="submitBtn">Зберегти план сезону</button>
+            <button type="button" class="clear-btn" onclick="clearForm()">Очистити форму</button>
+          </div>
+        </form>
+        <div id="formResult"></div>
+      </div>
+    </div>
+
+    <div id="list-tab" class="tab-content">
+        <div class="table-section">
+          <h2>Існуючі Сезони (Прогноз VS Факт) 📊</h2>
+          <p class="subtitle">Тут відображається порівняння плану та факту. Різниці виділені кольором: зелений — позитивна (факт > план), червоний — негативна (факт < план).</p>
+          <button class="refresh-btn" onclick="loadPlans()">🔄 Оновити список</button>
+          <div id="spinnerPlanner" class="loading" style="display:none;">Завантаження...</div>
+
+          <div class="overall-kpi" id="overallKpiDisplay" style="display: none;">
+            </div>
+          
+          <div class="analytics-dashboard" id="analyticsDashboard" style="display: none;">
+            </div>
+          
+          <h3 style="margin-top: 30px; color: #3498db; border-bottom: 2px solid #3498db; padding-bottom: 5px;">Деталізація по Сезонах</h3>
+          
+          <div class="season-cards" id="seasonCardsContainer">
+              </div>
+
+          <div id="tableResult"></div>
+        </div>
+      </div>
+
+    <script>
+      let currentPlanName = '';
+      let locationCount = 0;
+      let shiftCount = 0; 
+      let actualsData = {}; 
+      let seasonsData = []; // Новий глобальний масив для даних сезонів
+
+      window.onload = function() {
+        google.script.run.setupSheets(); 
+        loadPlans();
+        addLocationBlock();
+        
+        document.getElementById('planForm').addEventListener('submit', handleFormSubmit);
+        document.getElementById('planForm').addEventListener('input', updateOverallCalculatedFields);
+        document.querySelectorAll('.op-cost-input').forEach(input => {
+            input.addEventListener('input', updateOverallCalculatedFields);
+        });
+      };
+
+      // ====================================================================
+      // UI / TAB MANAGEMENT
+      // ====================================================================
+
+      function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById(tabName + '-tab').classList.add('active');
+        document.querySelector(`.tab-btn[onclick="switchTab('${tabName}')"]`).classList.add('active');
+        
+        if (tabName === 'list') {
+          loadPlans();
+        }
+      }
+
+      function clearForm() {
+        document.getElementById('planForm').reset();
+        document.getElementById('planIndex').value = -1;
+        document.getElementById('submitBtn').textContent = 'Зберегти план сезону';
+        document.getElementById('formResult').innerHTML = '';
+        currentPlanName = '';
+        document.getElementById('opCostPerChild').value = 0;
+        document.getElementById('totalChildren').value = 0;
+
+
+        document.getElementById('locationsContainer').innerHTML = '';
+        locationCount = 0;
+        shiftCount = 0;
+        addLocationBlock();
+        
+        updateOverallCalculatedFields();
+      }
+
+      // ====================================================================
+      // DYNAMIC LOCATION AND SHIFT MANAGEMENT 
+      // ====================================================================
+      
+      function addLocationBlock(locationName = '', numberOfShifts = 1, shiftDetails = []) {
+          locationCount++;
+          const container = document.getElementById('locationsContainer');
+          const locationId = `location-${Date.now()}-${locationCount}`;
+          
+          const block = document.createElement('div');
+          block.className = 'location-block';
+          block.setAttribute('data-location-id', locationId);
+          
+          block.innerHTML = `
+              <div class="shift-header">
+                  <h3>Локація #${locationCount}</h3>
+                  <button type="button" class="delete-btn" onclick="removeLocationBlock('${locationId}')">Видалити локацію</button>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                  <div>
+                      <label for="${locationId}-locationName">Назва Локації:</label>
+                      <input type="text" id="${locationId}-locationName" class="location-name" placeholder="e.g., Путила" value="${escapeHtml(locationName)}" oninput="updateShiftHeaders('${locationId}'); updateOverallCalculatedFields();" required>
+                  </div>
+                  <div>
+                      <label for="${locationId}-numberOfShifts">Кількість Змін на Локації:</label>
+                      <input type="number" id="${locationId}-numberOfShifts" class="number-of-shifts" min="1" value="${numberOfShifts}" onchange="regenerateShifts('${locationId}', this.value)" required>
+                  </div>
+              </div>
+              
+              <h4 style="margin-top: 20px;">Деталі ${numberOfShifts} змін:</h4>
+              <div class="shifts-container" id="${locationId}-shiftsContainer">
+                  </div>
+          `;
+          container.appendChild(block);
+          
+          regenerateShifts(locationId, numberOfShifts, shiftDetails);
+      }
+      
+      function removeLocationBlock(locationId) {
+          document.querySelector(`.location-block[data-location-id="${locationId}"]`).remove();
+          updateOverallCalculatedFields();
+      }
+
+      function regenerateShifts(locationId, count, shiftDetails = []) {
+          const container = document.getElementById(`${locationId}-shiftsContainer`);
+          container.innerHTML = '';
+          const locationName = document.getElementById(`${locationId}-locationName`).value.trim();
+
+          const actualCount = parseInt(count) || 0;
+          
+          for (let i = 0; i < actualCount; i++) {
+              const shiftData = shiftDetails[i] || null; 
+              const defaultShiftName = `${locationName || 'Зміна'} ${i + 1}`; 
+              
+              addShiftBlockDetail(container, locationName, i + 1, shiftData, defaultShiftName);
+          }
+          updateOverallCalculatedFields();
+      }
+      
+      function updateShiftHeaders(locationId) {
+          const locationName = document.getElementById(`${locationId}-locationName`).value.trim();
+          const shifts = document.getElementById(`${locationId}-shiftsContainer`).querySelectorAll('.shift-details-container');
+          
+          shifts.forEach((shiftBlock, index) => {
+              const shiftNumber = index + 1;
+              const shiftNameInput = shiftBlock.querySelector('.shift-name');
+              // Оновлюємо, лише якщо поле не редагувалося вручну
+              if (!shiftNameInput.classList.contains('manually-edited')) {
+                  shiftNameInput.value = `${locationName || 'Зміна'} ${shiftNumber}`;
+              }
+              shiftBlock.querySelector('.shift-header h3').textContent = `${locationName || 'Локація'} - Зміна ${shiftNumber}`;
+          });
+          updateOverallCalculatedFields();
+      }
+      
+      function addShiftBlockDetail(container, locationName, shiftNumber, shift = null, defaultShiftName) {
+        shiftCount++;
+        const shiftId = `shift-${shiftCount}`;
+
+        const block = document.createElement('div');
+        block.className = 'shift-details-container';
+        block.setAttribute('data-shift-id', shiftId);
+        block.setAttribute('data-location-name', locationName);
+
+        const isManuallyEdited = shift && shift.shiftName !== defaultShiftName;
+        const manualClass = isManuallyEdited ? 'manually-edited' : '';
+
+        // ВАЖЛИВО: ProgramCost та ExtraCost тепер вважаються "на дитину"
+        const programCostValue = shift ? shift.programCost : 0;
+        const extraCostValue = shift ? shift.extraCost : 0;
+        
+        block.innerHTML = `
+          <div class="shift-header">
+            <h3>${locationName || 'Локація'} - Зміна ${shiftNumber}</h3>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+            <div>
+              <label for="${shiftId}-shiftName">Назва Зміни (для звітності):</label>
+              <input type="text" id="${shiftId}-shiftName" class="shift-name ${manualClass}" placeholder="e.g., Путила 1" value="${shift ? escapeHtml(shift.shiftName) : defaultShiftName}" 
+              oninput="this.classList.add('manually-edited'); updateOverallCalculatedFields()" required>
+            </div>
+            <div>
+              <label for="${shiftId}-location">Локація (зафіксована):</label>
+              <input type="text" id="${shiftId}-location" class="location" value="${escapeHtml(locationName)}" disabled>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+            <div>
+              <label for="${shiftId}-shiftFee">Плата за зміну (грн):</label>
+              <input type="number" id="${shiftId}-shiftFee" class="shift-fee" step="0.01" value="${shift ? shift.shiftFee : 0}" required>
+            </div>
+            <div>
+              <label for="${shiftId}-shiftCount">Кількість змін (од.):</label>
+              <input type="number" id="${shiftId}-shiftCount" class="shift-count" value="${shift ? shift.shiftCount : 1}" required>
+            </div>
+            <div>
+              <label for="${shiftId}-avgChildren">Середня к-сть дітей:</label>
+              <input type="number" id="${shiftId}-avgChildren" class="avg-children" value="${shift ? shift.avgChildren : 0}" required>
+            </div>
+            <div>
+              <label for="${shiftId}-livingDays">К-сть днів проживання:</label>
+              <input type="number" id="${shiftId}-livingDays" class="living-days" value="${shift ? shift.livingDays : 1}" required>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+            <div>
+              <label for="${shiftId}-foodPricePerDay">Харчування 1 день (грн):</label>
+              <input type="number" id="${shiftId}-foodPricePerDay" class="food-price" step="0.01" value="${shift ? shift.foodPricePerDay : 0}" required>
+            </div>
+            <div>
+              <label for="${shiftId}-programCost">Програма (грн/дитина):</label>
+              <input type="number" id="${shiftId}-programCost" class="program-cost" step="0.01" value="${programCostValue}" required>
+            </div>
+            <div>
+              <label for="${shiftId}-extraCost">Дод. витрати (грн/дитина):</label>
+              <input type="number" id="${shiftId}-extraCost" class="extra-cost" step="0.01" value="${extraCostValue}" required>
+            </div>
+            <div>
+              <label for="${shiftId}-discountPercent">Знижка (%):</label>
+              <input type="number" id="${shiftId}-discountPercent" class="discount-percent" min="0" max="100" step="0.01" value="${shift ? shift.discountPercent : 0}" required>
+            </div>
+          </div>
+          
+          <label for="${shiftId}-discountChildrenCount">К-сть дітей зі знижкою (на одну зміну):</label>
+          <input type="number" id="${shiftId}-discountChildrenCount" class="discount-children-count" min="0" step="1" value="${shift ? shift.discountChildrenCount : 0}" required>
+
+          <h4 style="margin-top: 20px;">Склад команди (ЗП за весь період зміни)</h4>
+          <div class="team-members-wrapper" id="${shiftId}-teamMembersContainer">
+            </div>
+          <button type="button" onclick="addTeamMemberRow('${shiftId}-teamMembersContainer', null)">Додати працівника</button>
+          
+          <div class="summary-block">
+              <h4>📊 Детальний Звіт на 1 Дитину (за 1 зміну)</h4>
+              <div class="summary-item">
+                  <span>ЗП команди на дитину:</span> 
+                  <span id="${shiftId}-salaryPerChild" class="calculated-output">0.00 грн</span>
+              </div>
+              <div class="summary-item">
+                  <span>Проживання команди на дитину:</span> 
+                  <span id="${shiftId}-livingTeamPerChild" class="calculated-output">0.00 грн</span>
+              </div>
+              <div class="summary-item">
+                  <span>Харчування (дитина):</span> 
+                  <span id="${shiftId}-foodChildPerChild" class="calculated-output">0.00 грн</span>
+              </div>
+              <div class="summary-item">
+                  <span>Програма + Дод. витрати на дитину:</span> 
+                  <span id="${shiftId}-otherCostPerChild" class="calculated-output">0.00 грн</span>
+              </div>
+              <div class="summary-item total">
+                  <span>Собівартість путівки (Без Опер. Витрат):</span> 
+                  <span id="${shiftId}-costPriceNoOpCost" class="calculated-output">0.00 грн</span>
+              </div>
+              <div class="summary-item total" style="color: #27ae60;">
+                  <span>Собівартість путівки (З Прогнозною Часткою Опер. Витрат):</span> 
+                  <span id="${shiftId}-costPriceWithOpCost" class="calculated-output">0.00 грн</span>
+              </div>
+          </div>
+        `;
+
+        container.appendChild(block);
+
+        if (!shift) {
+          addDefaultTeamMembers(shiftId + '-teamMembersContainer');
+        } else {
+          shift.teamMembers.forEach(member => addTeamMemberRow(shiftId + '-teamMembersContainer', member));
+        }
+
+        block.querySelectorAll('input').forEach(input => {
+            if (input.id !== `${shiftId}-location`) {
+                input.addEventListener('input', updateOverallCalculatedFields);
+            }
+        });
+        
+        updateOverallCalculatedFields();
+      }
+      
+      function addDefaultTeamMembers(containerId) {
+        const defaults = [
+          { position: "Директор", salary: 20000, count: 1 },
+          { position: "Координатор", salary: 17500, count: 1 },
+          { position: "Сапорт", salary: 10000, count: 1 },
+          { position: "Тімлідер", salary: 5000, count: 1 },
+          { position: "Медик", salary: 10000, count: 1 },
+          { position: "Фотограф", salary: 10000, count: 1 }
+        ];
+        defaults.forEach(member => addTeamMemberRow(containerId, member));
+      }
+      
+      function addTeamMemberRow(containerId, member = null) {
+        const container = document.getElementById(containerId);
+        const row = document.createElement('div');
+        row.className = 'team-member-row';
+
+        const initialPosition = member && member.position ? member.position : '';
+        const initialSalary = member && member.salary ? member.salary : '';
+        const initialCount = member && member.count ? member.count : '';
+
+        row.innerHTML = `
+          <input type="text" class="position" placeholder="Посада (e.g., Директор)" value="${escapeHtml(initialPosition)}">
+          <input type="number" class="salary" placeholder="ЗП за зміну (грн)" min="0" step="0.01" value="${initialSalary}">
+          <input type="number" class="count" placeholder="Кількість" min="1" step="1" value="${initialCount}">
+          <button type="button" class="delete-btn" onclick="removeTeamMemberRow(this)">X</button>
+        `;
+        container.appendChild(row);
+        
+        row.querySelectorAll('input').forEach(input => input.addEventListener('input', updateOverallCalculatedFields));
+        updateOverallCalculatedFields();
+      }
+      
+      function removeTeamMemberRow(button) {
+        button.parentElement.remove();
+        updateOverallCalculatedFields();
+      }
+
+      // ====================================================================
+      // CALCULATIONS AND UI UPDATE
+      // ====================================================================
+
+      function getShiftData(shiftBlock) {
+        const locationName = shiftBlock.closest('.location-block').querySelector('.location-name').value;
+        const shiftId = shiftBlock.getAttribute('data-shift-id');
+        
+        const shiftFee = parseFloat(shiftBlock.querySelector('.shift-fee').value) || 0;
+        const shiftCount = parseInt(shiftBlock.querySelector('.shift-count').value) || 1;
+        const avgChildren = parseInt(shiftBlock.querySelector('.avg-children').value) || 0;
+        const livingDays = parseInt(shiftBlock.querySelector('.living-days').value) || 1;
+        
+        // ВАЖЛИВО: Ці поля тепер вважаються ВИТРАТАМИ НА ДИТИНУ
+        const foodPricePerDay = parseFloat(shiftBlock.querySelector('.food-price').value) || 0;
+        const programCostPerChild = parseFloat(shiftBlock.querySelector('.program-cost').value) || 0;
+        const extraCostPerChild = parseFloat(shiftBlock.querySelector('.extra-cost').value) || 0;
+        
+        const discountPercent = parseFloat(shiftBlock.querySelector('.discount-percent').value) || 0;
+        const discountChildrenCount = parseInt(shiftBlock.querySelector('.discount-children-count').value) || 0;
+        
+        const totalChildrenInShift = avgChildren;
+        const totalChildren = shiftCount * totalChildrenInShift;
+
+        const teamMembers = [];
+        const teamMembersContainer = shiftBlock.querySelector('.team-members-wrapper');
+        if (teamMembersContainer) {
+          teamMembersContainer.querySelectorAll('.team-member-row').forEach(row => {
+            const position = row.querySelector('.position').value.trim();
+            const salary = parseFloat(row.querySelector('.salary').value) || 0;
+            const count = parseInt(row.querySelector('.count').value) || 0;
+            if (position && salary > 0 && count > 0) {
+              teamMembers.push({ position, salary, count });
+            }
+          });
+        }
+        
+        const totalTeamCount = teamMembers.reduce((sum, member) => sum + member.count, 0);
+        const totalTeamSalaryPerShift = teamMembers.reduce((sum, member) => sum + member.salary * member.count, 0); 
+
+        // Розрахунки на ОДНУ зміну
+        const teamLivingCostPerShift = foodPricePerDay * livingDays * totalTeamCount; 
+        const childLivingCostPerShift = foodPricePerDay * livingDays; 
+        
+        // Розрахунки витрат на дитину (за 1 зміну)
+        const teamSalaryPerChild = totalChildrenInShift > 0 ? totalTeamSalaryPerShift / totalChildrenInShift : 0;
+        const teamLivingCostPerChild = totalChildrenInShift > 0 ? teamLivingCostPerShift / totalChildrenInShift : 0;
+        
+        // НОВИЙ РОЗРАХУНОК: Програма + Дод. витрати на дитину = введені суми (на дитину)
+        const otherCostPerChild = programCostPerChild + extraCostPerChild; 
+        
+        // Розрахунок доходу (за всі зміни)
+        const fullPriceChildren = Math.max(0, totalChildrenInShift - discountChildrenCount);
+        const discountedChildren = Math.min(totalChildrenInShift, discountChildrenCount);
+        const effectiveDiscount = (discountPercent / 100) * shiftFee;
+        
+        const revenuePerShift = (fullPriceChildren * shiftFee) + (discountedChildren * (shiftFee - effectiveDiscount));
+        const totalRevenue = revenuePerShift * shiftCount; 
+        
+        // Розрахунок прямих витрат (за всі зміни)
+        const totalTeamSalaryCost = totalTeamSalaryPerShift * shiftCount; // Всього ЗП команди за всі зміни
+        const totalTeamLivingCost = teamLivingCostPerShift * shiftCount; // Всього Проживання команди за всі зміни
+        const totalChildFoodCost = childLivingCostPerShift * totalChildren; // Всього Харчування дітей за всі зміни
+
+        // НОВИЙ РОЗРАХУНОК: Загальні витрати = (вартість на дитину) * (загальна к-сть дітей)
+        const totalProgramCost = programCostPerChild * totalChildren; 
+        const totalExtraCost = extraCostPerChild * totalChildren; 
+        const totalProgramAndExtraCost = totalProgramCost + totalExtraCost;
+
+        const totalDirectCost = totalTeamSalaryCost + totalTeamLivingCost + totalChildFoodCost + totalProgramAndExtraCost;
+
+        // Собівартість
+        const costPriceNoOpCost = teamSalaryPerChild + teamLivingCostPerChild + childLivingCostPerShift + otherCostPerChild;
+
+        return {
+          shiftName: shiftBlock.querySelector('.shift-name').value.trim(),
+          location: locationName,
+          shiftFee: shiftFee,
+          shiftCount: shiftCount,
+          avgChildren: totalChildrenInShift,
+          livingDays: livingDays,
+          foodPricePerDay: foodPricePerDay,
+          programCost: programCostPerChild, // Повертаємо per child для збереження
+          extraCost: extraCostPerChild,     // Повертаємо per child для збереження
+          discountPercent: discountPercent,
+          discountChildrenCount: discountChildrenCount,
+          teamMembers: teamMembers,
+          teamSalaryPerChild: teamSalaryPerChild,
+          teamLivingCostPerChild: teamLivingCostPerChild,
+          childLivingCostPerShift: childLivingCostPerShift,
+          otherCostPerChild: otherCostPerChild,
+          costPriceNoOpCost: costPriceNoOpCost,
+          shiftId: shiftId,
+          totalRevenue: totalRevenue,
+          totalDirectCost: totalDirectCost,
+          totalChildren: totalChildren,
+          // Додаємо прямі витрати на сезон (для агрегації загальних витрат)
+          totalTeamSalaryCost: totalTeamSalaryCost,
+          totalTeamLivingCost: totalTeamLivingCost,
+          totalChildFoodCost: totalChildFoodCost,
+          totalProgramAndExtraCost: totalProgramAndExtraCost,
+        };
+      }
+
+      function updateOverallCalculatedFields() {
+        const shiftBlocks = document.querySelectorAll('.shift-details-container');
+        let aggregatedRevenue = 0;
+        let aggregatedDirectCost = 0;
+        let aggregatedTotalChildren = 0;
+        
+        // Для середньої собівартості по табору та деталізації прямих витрат
+        let aggregatedSalaryCost = 0;
+        let aggregatedLivingTeamCost = 0;
+        let aggregatedFoodChildCost = 0;
+        let aggregatedProgramExtraCost = 0;
+        
+
+        shiftBlocks.forEach(shiftBlock => {
+          const data = getShiftData(shiftBlock);
+          aggregatedRevenue += data.totalRevenue;
+          aggregatedDirectCost += data.totalDirectCost;
+          aggregatedTotalChildren += data.totalChildren;
+          
+          // Агрегація для деталізації прямих витрат
+          aggregatedSalaryCost += data.totalTeamSalaryCost;
+          aggregatedLivingTeamCost += data.totalTeamLivingCost;
+          aggregatedFoodChildCost += data.totalChildFoodCost;
+          aggregatedProgramExtraCost += data.totalProgramAndExtraCost;
+        });
+
+        const advertisingCost = parseFloat(document.getElementById('advertisingCost').value) || 0;
+        const salesManagerCost = parseFloat(document.getElementById('salesManagerCost').value) || 0;
+        const seasonLaunchCost = parseFloat(document.getElementById('seasonLaunchCost').value) || 0;
+        
+        const totalSeasonOpCost = advertisingCost + salesManagerCost + seasonLaunchCost;
+        const totalSeasonCost = aggregatedDirectCost + totalSeasonOpCost;
+        const totalProfit = aggregatedRevenue - totalSeasonCost;
+        const profitMargin = aggregatedRevenue > 0 ? (totalProfit / aggregatedRevenue) * 100 : 0;
+        
+        // Розрахунок частки Опер. Витрат на одну дитину
+        const opCostPerChild = aggregatedTotalChildren > 0 ? totalSeasonOpCost / aggregatedTotalChildren : 0;
+        document.getElementById('opCostPerChild').value = opCostPerChild; 
+        document.getElementById('totalChildren').value = aggregatedTotalChildren;
+        
+        // РОЗРАХУНОК СЕРЕДНЬОЇ СОБІВАРТОСТІ ПО ТАБОРУ
+        const avgSalaryPerChild = aggregatedTotalChildren > 0 ? aggregatedSalaryCost / aggregatedTotalChildren : 0;
+        const avgLivingTeamPerChild = aggregatedTotalChildren > 0 ? aggregatedLivingTeamCost / aggregatedTotalChildren : 0;
+        const avgFoodChildPerChild = aggregatedTotalChildren > 0 ? aggregatedFoodChildCost / aggregatedTotalChildren : 0;
+        const avgOtherCostPerChild = aggregatedTotalChildren > 0 ? aggregatedProgramExtraCost / aggregatedTotalChildren : 0;
+        const avgCostPriceNoOpCost = avgSalaryPerChild + avgLivingTeamPerChild + avgFoodChildPerChild + avgOtherCostPerChild;
+        const avgCostPriceWithOpCost = avgCostPriceNoOpCost + opCostPerChild;
+        const avgRevenuePerChild = aggregatedTotalChildren > 0 ? aggregatedRevenue / aggregatedTotalChildren : 0;
+
+
+        // Оновлення детальних звітів по змінах
+        shiftBlocks.forEach(shiftBlock => {
+            const data = getShiftData(shiftBlock);
+            const costPriceWithOpCost = data.costPriceNoOpCost + opCostPerChild;
+
+            if (document.getElementById(`${data.shiftId}-salaryPerChild`)) {
+                document.getElementById(`${data.shiftId}-salaryPerChild`).textContent = `${formatCurrency(data.teamSalaryPerChild)} грн`;
+                document.getElementById(`${data.shiftId}-livingTeamPerChild`).textContent = `${formatCurrency(data.teamLivingCostPerChild)} грн`;
+                document.getElementById(`${data.shiftId}-foodChildPerChild`).textContent = `${formatCurrency(data.childLivingCostPerShift)} грн`;
+                document.getElementById(`${data.shiftId}-otherCostPerChild`).textContent = `${formatCurrency(data.otherCostPerChild)} грн`;
+                document.getElementById(`${data.shiftId}-costPriceNoOpCost`).textContent = `${formatCurrency(data.costPriceNoOpCost)} грн`;
+                document.getElementById(`${data.shiftId}-costPriceWithOpCost`).textContent = `${formatCurrency(costPriceWithOpCost)} грн`;
+            }
+        });
+
+        // Оновлення загальних показників (НОВИЙ ДЕТАЛЬНИЙ БЛОК)
+        document.getElementById('totalRevenueDisplay').textContent = `${formatCurrency(aggregatedRevenue)} грн`;
+        
+        // Оновлення деталізації прямих витрат
+        document.getElementById('aggSalaryCostDisplay').textContent = `${formatCurrency(aggregatedSalaryCost)} грн`;
+        document.getElementById('aggLivingTeamCostDisplay').textContent = `${formatCurrency(aggregatedLivingTeamCost)} грн`;
+        document.getElementById('aggFoodChildCostDisplay').textContent = `${formatCurrency(aggregatedFoodChildCost)} грн`;
+        document.getElementById('aggProgramExtraCostDisplay').textContent = `${formatCurrency(aggregatedProgramExtraCost)} грн`;
+        
+        // Основні підсумки
+        document.getElementById('totalDirectCostDisplay').textContent = `${formatCurrency(aggregatedDirectCost)} грн`;
+        document.getElementById('totalOpCostDisplay').textContent = `${formatCurrency(totalSeasonOpCost)} грн`;
+        document.getElementById('totalCostDisplay').textContent = `${formatCurrency(totalSeasonCost)} грн`;
+        document.getElementById('totalProfitDisplay').textContent = `${formatCurrency(totalProfit)} грн`;
+        document.getElementById('profitMarginDisplay').textContent = `${profitMargin.toFixed(2)}%`;
+        
+        // Оновлення середніх показників
+        document.getElementById('avgSalaryPerChild').textContent = `${formatCurrency(avgSalaryPerChild)} грн`;
+        document.getElementById('avgLivingTeamPerChild').textContent = `${formatCurrency(avgLivingTeamPerChild)} грн`;
+        document.getElementById('avgFoodChildPerChild').textContent = `${formatCurrency(avgFoodChildPerChild)} грн`;
+        document.getElementById('avgOtherCostPerChild').textContent = `${formatCurrency(avgOtherCostPerChild)} грн`;
+        document.getElementById('avgCostPriceNoOpCost').textContent = `${formatCurrency(avgCostPriceNoOpCost)} грн`;
+        document.getElementById('opCostPerChildDisplay').textContent = `${formatCurrency(opCostPerChild)} грн`;
+        document.getElementById('avgCostPriceWithOpCost').textContent = `${formatCurrency(avgCostPriceWithOpCost)} грн`;
+        document.getElementById('totalChildrenDisplay').textContent = `${aggregatedTotalChildren}`;
+        document.getElementById('avgRevenuePerChild').textContent = `${formatCurrency(avgRevenuePerChild)} грн`;
+      }
+      
+      // ====================================================================
+      // SERVER COMMUNICATION
+      // ====================================================================
+
+      function handleFormSubmit(event) {
+        event.preventDefault();
+        
+        // 1. Збір загальних даних сезону
+        // Важливо: opCostPerChild буде перерахований на сервері для надійності, але ми надсилаємо його тут.
+        const opCostPerChild = parseFloat(document.getElementById('opCostPerChild').value) || 0;
+
+        const planData = {
+          name: document.getElementById('planName').value.trim(),
+          advertisingCost: parseFloat(document.getElementById('advertisingCost').value) || 0,
+          salesManagerCost: parseFloat(document.getElementById('salesManagerCost').value) || 0,
+          seasonLaunchCost: parseFloat(document.getElementById('seasonLaunchCost').value) || 0,
+          opCostPerChild: opCostPerChild 
+        };
+        
+        // Перевірка назви сезону
+        if (!planData.name) {
+            document.getElementById('formResult').innerHTML = '<p class="error">❌ Будь ласка, введіть назву сезону.</p>';
+            return;
+        }
+
+        // 2. Збір даних усіх змін
+        const shiftDetails = [];
+        let validationError = false;
+        document.querySelectorAll('.shift-details-container').forEach(shiftBlock => {
+            const data = getShiftData(shiftBlock);
+            if (data.location && data.shiftName) {
+                shiftDetails.push(data);
+            } else {
+                validationError = true;
+            }
+        });
+        
+        if (shiftDetails.length === 0 || validationError) {
+          document.getElementById('formResult').innerHTML = '<p class="error">❌ Необхідно додати та заповнити хоча б одну зміну/локацію коректними даними.</p>';
+          return;
+        }
+        
+        const rowIndex = parseInt(document.getElementById('planIndex').value);
+
+        document.getElementById('formResult').innerHTML = '<p class="loading">⏳ Збереження даних плану...</p>';
+        document.getElementById('submitBtn').disabled = true;
+
+        google.script.run
+          .withSuccessHandler(onSaveSuccess)
+          .withFailureHandler(onError)
+          .saveFullPlan(planData, shiftDetails, rowIndex);
+      }
+
+      function loadPlans() {
+      
+        document.getElementById('spinnerPlanner').style.display = 'block';
+        document.getElementById('tableResult').innerHTML = '';
+
+        // Спочатку завантажуємо фактичні дані
+        google.script.run
+            .withSuccessHandler(function(actuals) {
+                actualsData = actuals; // Зберігаємо фактичні дані
+                // Потім завантажуємо прогнозні плани
+                google.script.run
+                    .withSuccessHandler(renderPlans)
+                    .withFailureHandler(onErrorInList)
+                    .getPlans();
+            })
+            .withFailureHandler(onErrorInList)
+            .getActualsBySeason();
+      }
+
+      // НОВИЙ ФУНКЦІОНАЛ: ФОРМАТУВАННЯ РІЗНИЦЬ З КОЛЬОРОМ
+      function formatDifference(value) {
+        const formatted = formatCurrency(value);
+        if (value > 0) {
+          return `<span class="positive-diff">+${formatted}</span>`;
+        } else if (value < 0) {
+          return `<span class="negative-diff">${formatted}</span>`;
+        } else {
+          return `<span class="zero-diff">${formatted}</span>`;
+        }
+      }
+
+      function renderPlans(plans) {
+          const dashboardContainer = document.getElementById('analyticsDashboard');
+          const cardsContainer = document.getElementById('seasonCardsContainer');
+          const overallKpiDisplay = document.getElementById('overallKpiDisplay');
+
+          dashboardContainer.innerHTML = '';
+          cardsContainer.innerHTML = '';
+          overallKpiDisplay.innerHTML = '';
+          seasonsData = []; // Очищуємо дані сезонів
+
+          if (plans.length === 0) {
+              cardsContainer.innerHTML = '<div>Немає жодного збереженого плану сезону.</div>';
+          } else {
+              
+              // ====================================================================
+              // 1. Агрегація та Розрахунки для Дашборду
+              // ====================================================================
+              let totalPlanRevenue = 0, totalActualRevenue = 0;
+              let totalPlanCost = 0, totalActualCost = 0;
+              let totalPlanChildren = 0, totalActualChildren = 0;
+              
+              seasonsData = plans.map((plan) => {
+                  const actuals = actualsData[plan.Name] || { revenue: 0, expense: 0, children: 0 };
+                  
+                  // Загальна агрегація
+                  totalPlanRevenue += plan.TotalRevenue;
+                  totalActualRevenue += actuals.revenue;
+                  totalPlanCost += plan.TotalSeasonCost;
+                  totalActualCost += actuals.expense;
+                  totalPlanChildren += plan.TotalChildren || 0;
+                  totalActualChildren += actuals.children || 0;
+                  
+                  return { plan, actuals };
+              });
+
+              // ====================================================================
+              // 2. Створення Карток KPI
+              // ====================================================================
+              
+              const overallPlanProfit = totalPlanRevenue - totalPlanCost;
+              const overallActualProfit = totalActualRevenue - totalActualCost;
+              const overallProfitDiff = overallActualProfit - overallPlanProfit;
+              const overallPlanMargin = totalPlanRevenue > 0 ? (overallPlanProfit / totalPlanRevenue) * 100 : 0;
+              const overallActualMargin = totalActualRevenue > 0 ? (overallActualProfit / totalActualRevenue) * 100 : 0;
+
+              const kpiMetrics = [
+                  { title: 'Загальний Дохід', plan: totalPlanRevenue, fact: totalActualRevenue, format: (v) => formatCurrency(v) + ' грн', isRevenue: true },
+                  { title: 'Загальні Витрати', plan: totalPlanCost, fact: totalActualCost, format: (v) => formatCurrency(v) + ' грн', isCost: true },
+                  { title: 'Чистий Прибуток', plan: overallPlanProfit, fact: overallActualProfit, format: (v) => formatCurrency(v) + ' грн', isProfit: true },
+                  { title: 'Рентабельність', plan: overallPlanMargin, fact: overallActualMargin, format: (v) => v.toFixed(2) + '%', isMargin: true },
+                  { title: 'Кількість дітей', plan: totalPlanChildren, fact: totalActualChildren, format: (v) => v, isChildren: true },
+              ];
+              
+              kpiMetrics.forEach(metric => {
+                  const diff = metric.fact - metric.plan;
+                  let diffClass = 'zero-diff';
+                  if (metric.isCost) { // Витрати: факт < план = позитивно (зелений)
+                      diffClass = diff < 0 ? 'positive-diff' : (diff > 0 ? 'negative-diff' : 'zero-diff');
+                  } else if (metric.isChildren) {
+                      diffClass = diff > 0 ? 'positive-diff' : (diff < 0 ? 'negative-diff' : 'zero-diff');
+                  } else { // Дохід, Прибуток, Рентабельність: факт > план = позитивно (зелений)
+                      diffClass = diff > 0 ? 'positive-diff' : (diff < 0 ? 'negative-diff' : 'zero-diff');
+                  }
+
+                  // Визначаємо колір без вкладеного тернарного оператора
+                  let colorValue;
+                  if (diffClass === 'positive-diff') {
+                    colorValue = '#27ae60';
+                  } else if (diffClass === 'negative-diff') {
+                    colorValue = '#e74c3c';
+                  } else {
+                    colorValue = '#2c3e50';
+                  }
+
+                  const card = document.createElement('div');
+                  card.className = 'kpi-card';
+                  card.innerHTML = `
+                      <div class="kpi-title">${metric.title} (План)</div>
+                      <div class="kpi-value">${metric.format(metric.plan)}</div>
+                      <div class="kpi-title" style="margin-top: 10px;">Факт</div>
+                      <div class="kpi-value" style="color: ${colorValue};">${metric.format(metric.fact)}</div>
+                      <div class="kpi-diff ${diffClass}">Різниця: ${metric.format(diff)}</div>
+                  `;
+                  dashboardContainer.appendChild(card);
+              });
+
+              // Загальні KPI (маленький блок)
+              const overallColor = overallActualProfit >= 0 ? '#27ae60' : '#e74c3c';
+              const overallMarginColor = overallActualMargin >= overallPlanMargin ? '#27ae60' : '#e74c3c';
+              overallKpiDisplay.innerHTML = `
+                  <div class="kpi-item">
+                      <div class="kpi-label">Загальний Прибуток (Факт)</div>
+                      <div class="kpi-number" style="color: ${overallColor};">${formatCurrency(overallActualProfit)} грн</div>
+                  </div>
+                  <div class="kpi-item">
+                      <div class="kpi-label">Рентабельність (Факт)</div>
+                      <div class="kpi-number" style="color: ${overallMarginColor};">${overallActualMargin.toFixed(2)}%</div>
+                  </div>
+                  <div class="kpi-item">
+                      <div class="kpi-label">Всього Дітей (Факт)</div>
+                      <div class="kpi-number">${totalActualChildren}</div>
+                  </div>
+              `;
+
+              // ====================================================================
+              // 3. Створення Карток Сезонів
+              // ====================================================================
+              seasonsData.forEach(({plan, actuals}, index) => {
+                  const actualProfit = actuals.revenue - actuals.expense;
+                  const revenueDiff = actuals.revenue - plan.TotalRevenue;
+                  const costDiff = actuals.expense - plan.TotalSeasonCost;
+                  const profitDiff = actualProfit - plan.TotalProfit;
+                  const childrenDiff = actuals.children - (plan.TotalChildren || 0);
+                  
+                  const profitColor = actualProfit > 0 ? '#27ae60' : '#e74c3c';
+
+                  const card = document.createElement('div');
+                  card.className = 'season-card';
+                  
+                  card.innerHTML = `
+                      <div class="season-header">
+                          <span class="season-name">🏕️ ${escapeHtml(plan.Name)}</span>
+                          <div class="season-actions">
+                              <button class="edit-btn" style="padding: 5px 10px; font-size: 12px;" onclick="editPlan(${plan.RowIndex}, '${escapeHtml(plan.Name)}')">Редагувати</button>
+                              <button class="delete-btn" style="padding: 5px 10px; font-size: 12px;" onclick="confirmDelete(${plan.RowIndex}, '${escapeHtml(plan.Name)}')">Видалити</button>
+                              <button class="details-btn" style="padding: 5px 10px; font-size: 12px; background: #3498db; color: white;" onclick="showPlanDetails(${index})">Деталі</button>
+                          </div>
+                      </div>
+                      
+                      <div class="metric-row">
+                          <span class="metric-label">**Дохід (План/Факт):**</span>
+                          <span class="metric-value">${formatCurrency(plan.TotalRevenue)} / ${formatCurrency(actuals.revenue)} грн (${formatDifference(revenueDiff)})</span>
+                      </div>
+                      <div class="metric-row">
+                          <span class="metric-label">**Витрати (План/Факт):**</span>
+                          <span class="metric-value">${formatCurrency(plan.TotalSeasonCost)} / ${formatCurrency(actuals.expense)} грн (${formatDifference(-costDiff)})</span>
+                      </div>
+                      <div class="metric-row" style="border-top: 1px solid #ddd; margin-top: 5px; padding-top: 5px;">
+                          <span class="metric-label" style="font-weight: bold;">**Чистий Прибуток (План/Факт):**</span>
+                          <span class="metric-value" style="font-weight: bold; color: ${profitColor};">${formatCurrency(plan.TotalProfit)} / ${formatCurrency(actualProfit)} грн (${formatDifference(profitDiff)})</span>
+                      </div>
+                      <div class="metric-row">
+                          <span class="metric-label">Рентабельність (План/Факт):</span>
+                          <span class="metric-value">${parseFloat(plan.ProfitMargin).toFixed(2)}% / ${actuals.revenue > 0 ? ((actualProfit / actuals.revenue) * 100).toFixed(2) : 0.00}%</span>
+                      </div>
+                      <div class="metric-row">
+                          <span class="metric-label">Кількість дітей (План/Факт):</span>
+                          <span class="metric-value">${plan.TotalChildren || 0} / ${actuals.children || 0} (${formatDifferenceChildren(childrenDiff)})</span>
+                      </div>
+                  `;
+                  cardsContainer.appendChild(card);
+              });
+
+              document.getElementById('analyticsDashboard').style.display = 'grid';
+              document.getElementById('overallKpiDisplay').style.display = 'flex';
+          }
+
+          document.getElementById('spinnerPlanner').style.display = 'none';
+      }
+
+      // НОВА ФУНКЦІЯ: Форматування різниці для дітей (без 'грн')
+      function formatDifferenceChildren(value) {
+          const formatted = Math.abs(value);
+          if (value > 0) {
+              return `<span class="positive-diff">+${formatted}</span>`;
+          } else if (value < 0) {
+              return `<span class="negative-diff">-${formatted}</span>`;
+          } else {
+              return `<span class="zero-diff">${formatted}</span>`;
+          }
+      }
+
+      function editPlan(index, planName) {
+        document.getElementById('planIndex').value = index;
+        document.getElementById('planName').value = planName;
+        
+        google.script.run
+          .withSuccessHandler(function(plans) {
+            const plan = plans.find(p => p.Name === planName);
+            if (plan) {
+              document.getElementById('advertisingCost').value = plan.AdvertisingCost;
+              document.getElementById('salesManagerCost').value = plan.SalesManagerCost;
+              document.getElementById('seasonLaunchCost').value = plan.SeasonLaunchCost;
+              
+              document.getElementById('submitBtn').textContent = `Оновити план: ${planName}`;
+              document.getElementById('formResult').innerHTML = '<p class="success">✅ Загальні дані завантажено. Завантаження змін...</p>';
+              
+              google.script.run
+                .withSuccessHandler(function(shiftDetails) {
+                  document.getElementById('locationsContainer').innerHTML = '';
+                  locationCount = 0;
+                  shiftCount = 0;
+                  
+                  if (shiftDetails.length === 0) {
+                    addLocationBlock();
+                  } else {
+                    const groupedByLocation = shiftDetails.reduce((acc, shift) => {
+                        const loc = shift.location;
+                        if (!acc[loc]) {
+                            acc[loc] = [];
+                        }
+                        acc[loc].push(shift);
+                        return acc;
+                    }, {});
+
+                    for (const loc in groupedByLocation) {
+                        const shifts = groupedByLocation[loc];
+                        addLocationBlock(loc, shifts.length, shifts);
+                    }
+                  }
+                  
+                  updateOverallCalculatedFields();
+                  document.getElementById('formResult').innerHTML = '<p class="success">✅ План завантажено для редагування. Перейдіть до вкладки "Додати/Редагувати Сезон".</p>';
+                  switchTab('add');
+                })
+                .withFailureHandler(onError)
+                .getShiftDetails(planName);
+            } else {
+              onError({ message: 'План не знайдено.' });
+            }
+          })
+          .withFailureHandler(onError)
+          .getPlans();
+      }
+
+      // РОЗШИРЕНА ФУНКЦІЯ: Показати деталі плану з повною деталізацією (за індексом)
+      function showPlanDetails(index) {
+        const data = seasonsData[index];
+        if (!data) {
+          console.error('Дані сезону не знайдено для індексу:', index);
+          return;
+        }
+        const { plan, actuals: basicActuals } = data;
+
+        const modal = document.getElementById('detailsModal');
+        const title = document.getElementById('modalTitle');
+        const body = document.getElementById('modalBody');
+
+        title.innerText = `Деталі сезону: ${escapeHtml(plan.Name)}`;
+        
+        // Показуємо модал з лоадером
+        body.innerHTML = '<p class="loading">Завантаження детальної інформації...</p>';
+        modal.style.display = 'block';
+
+        // Асинхронно завантажуємо деталі: shift details та actual details
+        google.script.run
+          .withSuccessHandler(function(shiftDetails) {
+            // Далі завантажуємо actual details
+            google.script.run
+              .withSuccessHandler(function(actualDetails) {
+                // Тепер генеруємо повний HTML
+                const htmlContent = generateDetailedModalContent(plan, basicActuals, shiftDetails, actualDetails);
+                body.innerHTML = htmlContent;
+              })
+              .withFailureHandler(function(error) {
+                body.innerHTML = `<p class="error">Помилка завантаження фактичних деталей: ${escapeHtml(error.message)}</p>`;
+              })
+              .getActualDetailsBySeason(plan.Name);
+          })
+          .withFailureHandler(function(error) {
+            body.innerHTML = `<p class="error">Помилка завантаження деталей плану: ${escapeHtml(error.message)}</p>`;
+          })
+          .getPlanShiftDetails(plan.Name);  // НОВА ФУНКЦІЯ: Повертає shift details з обчисленими полями
+      }
+
+      // НОВА ФУНКЦІЯ: Генерує HTML для модального вікна з розширеною деталізацією
+      function generateDetailedModalContent(plan, basicActuals, shiftDetails, actualDetails) {
+        let htmlContent = '';
+
+        // 1. Загальна аналітика (як раніше, але з виправленням для витрат)
+        const actualProfit = basicActuals.revenue - basicActuals.expense;
+        htmlContent += `
+            <div class="details-section">
+                <h4>📈 Загальна аналітика</h4>
+                <table class="details-table">
+                    <tr><th>Показник</th><th>План</th><th>Факт</th><th>Різниця (Факт - План)</th></tr>
+                    <tr>
+                        <td><strong>Дохід</strong></td>
+                        <td>${formatCurrency(plan.TotalRevenue)} грн</td>
+                        <td>${formatCurrency(basicActuals.revenue)} грн</td>
+                        <td class="diff-cell">${formatDifference(basicActuals.revenue - plan.TotalRevenue)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Витрати</strong></td>
+                        <td>${formatCurrency(plan.TotalSeasonCost)} грн</td>
+                        <td>${formatCurrency(basicActuals.expense)} грн</td>
+                        <td class="diff-cell">${formatDifference(basicActuals.expense - plan.TotalSeasonCost, true)}</td>  <!-- true для витрат (інвертована логіка) -->
+                    </tr>
+                    <tr class="category-group">
+                        <td><strong>Прибуток</strong></td>
+                        <td>${formatCurrency(plan.TotalProfit)} грн</td>
+                        <td>${formatCurrency(actualProfit)} грн</td>
+                        <td class="diff-cell">${formatDifference(actualProfit - plan.TotalProfit)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Рентабельність</strong></td>
+                        <td>${parseFloat(plan.ProfitMargin).toFixed(2)}%</td>
+                        <td>${basicActuals.revenue > 0 ? ((actualProfit / basicActuals.revenue) * 100).toFixed(2) : '0.00'}%</td>
+                        <td class="diff-cell">${formatDifferenceMargin((basicActuals.revenue > 0 ? ((actualProfit / basicActuals.revenue) * 100) : 0) - parseFloat(plan.ProfitMargin))}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Кількість дітей</strong></td>
+                        <td>${plan.TotalChildren || 0}</td>
+                        <td>${basicActuals.children || 0}</td>
+                        <td class="diff-cell">${formatDifferenceChildren((basicActuals.children || 0) - (plan.TotalChildren || 0))}</td>
+                    </tr>
+                </table>
+            </div>
+        `;
+
+        // 2. Деталізація Доходів (Планові по змінах)
+        if (shiftDetails && shiftDetails.length > 0) {
+          htmlContent += `
+              <div class="details-section">
+                  <h4>💵 Деталізація Доходів (Планові по змінах)</h4>
+                  <table class="details-table breakdown-table">
+                      <tr><th>Назва Зміни</th><th>Локація</th><th>К-сть змін</th><th>Середня к-сть дітей на зміну</th><th>Ціна за дитину (грн)</th><th>Загальний дохід по змінах (грн)</th></tr>
+          `;
+          shiftDetails.forEach(shift => {
+            // Спрощений розрахунок доходу по зміні (враховуючи знижки)
+            const fullPriceChildren = Math.max(0, shift.avgChildren - shift.discountChildrenCount);
+            const discountedChildren = Math.min(shift.avgChildren, shift.discountChildrenCount);
+            const effectiveDiscount = (shift.discountPercent / 100) * shift.shiftFee;
+            const revenuePerShift = (fullPriceChildren * shift.shiftFee) + (discountedChildren * (shift.shiftFee - effectiveDiscount));
+            htmlContent += `
+                  <tr>
+                      <td>${escapeHtml(shift.shiftName)}</td>
+                      <td>${escapeHtml(shift.location)}</td>
+                      <td>${shift.shiftCount}</td>
+                      <td>${shift.avgChildren}</td>
+                      <td>${formatCurrency(shift.shiftFee)}</td>
+                      <td>${formatCurrency(revenuePerShift * shift.shiftCount)}</td>
+                  </tr>
+              `;
+          });
+          htmlContent += `</table></div>`;
+        }
+
+        // 3. Деталізація Витрат (Планові)
+        if (shiftDetails && shiftDetails.length > 0) {
+          let totalSalary = 0, totalLivingTeam = 0, totalFoodChild = 0, totalProgramExtra = 0;
+          shiftDetails.forEach(shift => {
+            totalSalary += shift.totalTeamSalaryCost || 0;
+            totalLivingTeam += shift.totalTeamLivingCost || 0;
+            totalFoodChild += shift.totalChildFoodCost || 0;
+            totalProgramExtra += shift.totalProgramAndExtraCost || 0;
+          });
+          const opCosts = {
+            advertising: plan.AdvertisingCost || 0,
+            salesManager: plan.SalesManagerCost || 0,
+            launch: plan.SeasonLaunchCost || 0,
+            total: (plan.AdvertisingCost || 0) + (plan.SalesManagerCost || 0) + (plan.SeasonLaunchCost || 0)
+          };
+          const totalSeasonCost = plan.TotalSeasonCost || 0;
+
+          htmlContent += `
+              <div class="details-section">
+                  <h4>💸 Деталізація Витрат (Планові)</h4>
+                  <table class="details-table breakdown-table">
+                      <tr><th>Категорія</th><th>Сума (грн)</th><th>Частка від загальних витрат (%)</th></tr>
+                      <tr class="category-group"><td colspan="3"><strong>Прямі витрати</strong></td></tr>
+                      <tr><td>ЗП команди (сезон)</td><td>${formatCurrency(totalSalary)}</td><td>${totalSeasonCost > 0 ? ((totalSalary / totalSeasonCost) * 100).toFixed(1) : '0.0'}%</td></tr>
+                      <tr><td>Проживання команди (сезон)</td><td>${formatCurrency(totalLivingTeam)}</td><td>${totalSeasonCost > 0 ? ((totalLivingTeam / totalSeasonCost) * 100).toFixed(1) : '0.0'}%</td></tr>
+                      <tr><td>Харчування дітей (сезон)</td><td>${formatCurrency(totalFoodChild)}</td><td>${totalSeasonCost > 0 ? ((totalFoodChild / totalSeasonCost) * 100).toFixed(1) : '0.0'}%</td></tr>
+                      <tr><td>Програма + Дод. витрати (сезон)</td><td>${formatCurrency(totalProgramExtra)}</td><td>${totalSeasonCost > 0 ? ((totalProgramExtra / totalSeasonCost) * 100).toFixed(1) : '0.0'}%</td></tr>
+                      <tr class="category-group"><td colspan="3"><strong>Операційні витрати</strong></td></tr>
+                      <tr><td>Реклама</td><td>${formatCurrency(opCosts.advertising)}</td><td>${totalSeasonCost > 0 ? ((opCosts.advertising / totalSeasonCost) * 100).toFixed(1) : '0.0'}%</td></tr>
+                      <tr><td>Оплата менеджерів</td><td>${formatCurrency(opCosts.salesManager)}</td><td>${totalSeasonCost > 0 ? ((opCosts.salesManager / totalSeasonCost) * 100).toFixed(1) : '0.0'}%</td></tr>
+                      <tr><td>Запуск сезону</td><td>${formatCurrency(opCosts.launch)}</td><td>${totalSeasonCost > 0 ? ((opCosts.launch / totalSeasonCost) * 100).toFixed(1) : '0.0'}%</td></tr>
+                      <tr><td><strong>Всього операційних</strong></td><td><strong>${formatCurrency(opCosts.total)}</strong></td><td><strong>${totalSeasonCost > 0 ? ((opCosts.total / totalSeasonCost) * 100).toFixed(1) : '0.0'}%</strong></td></tr>
+                  </table>
+              </div>
+          `;
+        }
+
+        // 4. Деталізація Фактичних Доходів
+        if (actualDetails && actualDetails.revenues && actualDetails.revenues.length > 0) {
+          htmlContent += `
+              <div class="details-section">
+                  <h4>💰 Фактичні Доходи (з ShiftExpenses)</h4>
+                  <table class="details-table breakdown-table">
+                      <tr><th>Дата</th><th>Рахунок</th><th>Категорія</th><th>Дод. інформація</th><th>Сума (грн)</th><th>Коментар</th></tr>
+          `;
+          actualDetails.revenues.forEach(row => {
+            htmlContent += `
+                  <tr>
+                      <td>${escapeHtml(row[0])}</td>
+                      <td>${escapeHtml(row[2])}</td>
+                      <td>${escapeHtml(row[5])}</td>
+                      <td>${escapeHtml(row[9])}</td>
+                      <td>${formatCurrency(row[10])}</td>
+                      <td>${escapeHtml(row[11])}</td>
+                  </tr>
+              `;
+          });
+          htmlContent += `</table></div>`;
+        } else {
+          htmlContent += `<div class="details-section"><h4>💰 Фактичні Доходи</h4><p>Немає записів доходів для цього сезону.</p></div>`;
+        }
+
+        // 5. Деталізація Фактичних Витрат (груповані)
+        if (actualDetails && actualDetails.expenses && Object.keys(actualDetails.expenses).length > 0) {
+          htmlContent += `
+              <div class="details-section">
+                  <h4>📉 Фактичні Витрати (груповані по категоріях з ShiftExpenses)</h4>
+                  <table class="details-table breakdown-table">
+                      <tr><th>Категорія</th><th>Підкатегорія</th><th>Загальна сума (грн)</th><th>Кількість записів</th></tr>
+          `;
+          Object.keys(actualDetails.expenses).forEach(category => {
+            actualDetails.expenses[category].forEach(subCat => {
+              htmlContent += `
+                  <tr>
+                      <td>${escapeHtml(category)}</td>
+                      <td>${escapeHtml(subCat.name)}</td>
+                      <td>${formatCurrency(subCat.total)}</td>
+                      <td>${subCat.count}</td>
+                  </tr>
+              `;
+            });
+          });
+          htmlContent += `</table></div>`;
+        } else {
+          htmlContent += `<div class="details-section"><h4>📉 Фактичні Витрати</h4><p>Немає записів витрат для цього сезону.</p></div>`;
+        }
+
+        // 6. Детальний список всіх фактичних записів
+        if (actualDetails && actualDetails.allRecords && actualDetails.allRecords.length > 0) {
+          htmlContent += `
+              <div class="details-section">
+                  <h4>📋 Всі Фактичні Записи (Детальний список)</h4>
+                  <table class="details-table breakdown-table">
+                      <tr><th>Дата</th><th>Група</th><th>Рахунок</th><th>Локація</th><th>Категорія</th><th>Сума (грн)</th><th>Коментар</th></tr>
+          `;
+          actualDetails.allRecords.forEach(row => {
+            htmlContent += `
+                  <tr>
+                      <td>${escapeHtml(row[0])}</td>
+                      <td>${escapeHtml(row[1])}</td>
+                      <td>${escapeHtml(row[2])}</td>
+                      <td>${escapeHtml(row[4])}</td>
+                      <td>${escapeHtml(row[5])}</td>
+                      <td>${formatCurrency(row[10])}</td>
+                      <td>${escapeHtml(row[11])}</td>
+                  </tr>
+              `;
+          });
+          htmlContent += `</table></div>`;
+        }
+
+        return htmlContent;
+      }
+
+      // ДОДАТКОВІ ФУНКЦІЇ ФОРМАТУВАННЯ ДЛЯ МОДАЛІ
+      function formatDifference(value, isCost = false) {
+        const absValue = Math.abs(value);
+        const formatted = formatCurrency(absValue);
+        let prefix = '';
+        let className = 'zero-diff';
+        if (value > 0) {
+          prefix = '+';
+          className = isCost ? 'negative-diff' : 'positive-diff';  // Для витрат: + це погано
+        } else if (value < 0) {
+          prefix = '';
+          className = isCost ? 'positive-diff' : 'negative-diff';  // Для витрат: - це добре
+        }
+        return `<span class="${className}">${prefix}${formatted} грн</span>`;
+      }
+
+      function formatDifferenceMargin(value) {
+        const formatted = value.toFixed(2) + '%';
+        if (value > 0) {
+          return `<span class="positive-diff">+${formatted}</span>`;
+        } else if (value < 0) {
+          return `<span class="negative-diff">${formatted}</span>`;
+        } else {
+          return `<span class="zero-diff">${formatted}</span>`;
+        }
+      }
+
+      function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+      }
+
+      function confirmDelete(index, planName) {
+        if (confirm(`Ви впевнені, що хочете видалити план "${planName}" та всі пов'язані з ним деталі змін?`)) {
+          document.getElementById('tableResult').innerHTML = '<p class="loading">⏳ Видалення...</p>';
+          
+          google.script.run
+            .withSuccessHandler(onDeleteSuccess)
+            .withFailureHandler(onErrorInList)
+            .deletePlan(index, planName);
+        }
+      }
+
+      function onSaveSuccess() {
+        document.getElementById('formResult').innerHTML = '<p class="success">✅ План сезону та деталі змін успішно збережено/оновлено!</p>';
+        document.getElementById('submitBtn').disabled = false;
+        clearForm();
+      }
+
+      function onDeleteSuccess() {
+        document.getElementById('tableResult').innerHTML = '<p class="success">✅ План сезону та деталі змін успішно видалено.</p>';
+        loadPlans();
+      }
+
+      function onError(error) {
+        document.getElementById('formResult').innerHTML = '<p class="error">❌ Помилка: ' + escapeHtml(error.message) + '</p>';
+        document.getElementById('submitBtn').disabled = false;
+      }
+      
+      function onErrorInList(error) {
+        document.getElementById('tableResult').innerHTML = '<p class="error">❌ Помилка: ' + escapeHtml(error.message) + '</p>';
+        document.getElementById('spinnerPlanner').style.display = 'none';
+      }
+
+      // ====================================================================
+      // UTILS
+      // ====================================================================
+
+      function escapeHtml(text) {
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        if (typeof text !== 'string') return text;
+        return text.replace(/[&<>"']/g, m => map[m]);
+      }
+      
+      function formatCurrency(value) {
+        return parseFloat(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+      }
+    </script>
+
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+          <span class="close-button" onclick="closeModal('detailsModal')">&times;</span>
+          <h3 id="modalTitle">Деталі Сезону</h3>
+          
+          <div id="modalBody">
+            </div>
+          
+        </div>
+    </div>
+
+  </body>
+</html>
+

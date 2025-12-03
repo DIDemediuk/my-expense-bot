@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Credentials (ВАЖЛИВО - не комітити!)
+credentials.json
+*.json
+!package.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backup files
+*_backup_*
+index_backup*.html
+index_backup.html
+
+# HTML files (якщо не потрібні в репозиторії)
+# index.html
+# plan.html
+
+# Temporary files
+index
+
