@@ -203,6 +203,27 @@ ACCOUNT_MAP = {
     "спельчук а": "ФОП №6 Спельчук А.А.", "8": "ФОП №8 Чолан Л.", "Чолан": "ФОП №8 Чолан Л.",
 }
 
+# Конфігурація для Dividends
+DIVIDENDS_CONFIG = {
+    'owners': {
+        'vanya': 'Ваня',
+        'yana': 'Яна'
+    },
+    'categories_by_owner': {
+        'vanya': {
+            'mantra': 'Мантра',
+            'osobyste_vanya': 'Особисте Ваня',
+            'synychka_vanya': 'Синичка Ваня',
+            'novi_proekty_vanya': 'Нові проекти Ваня'
+        },
+        'yana': {
+            'osobyste_yana': 'Особисте Яна',
+            'synychka_yana': 'Синичка Яна',
+            'novi_proekty_yana': 'Нові проекти Яна'
+        }
+    }
+}
+
 # Стани
 WAITING_REPORT_PERIOD, WAITING_REPORT_OWNER, WAITING_REPORT_FOP = range(3)
 WAITING_EXPENSE_TYPE, WAITING_EXPENSE_INPUT = range(3, 5)
@@ -216,3 +237,8 @@ WAITING_REPORT_TYPE = 999
 WAITING_PERSON_NAME = 9999
 WAITING_ACCOUNT_SELECTION = 9998
 WAITING_ACCOUNT_INPUT = 9997
+# Стани для dividends
+WAITING_DIVIDENDS_OWNER = 8000
+WAITING_DIVIDENDS_CATEGORY = 8001
+WAITING_DIVIDENDS_ACCOUNT = 8002
+WAITING_DIVIDENDS_AMOUNT = 8003

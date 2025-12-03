@@ -8,7 +8,9 @@ from config import (
     WAITING_PERIOD, WAITING_LOCATION, WAITING_CHANGE, WAITING_CATEGORY,
     WAITING_SUBCATEGORY, WAITING_PERSON_NAME, WAITING_ACCOUNT_SELECTION,
     CONFIG_OTHER, SUB_ASCII_TO_UKR, SUBSUB_UKR_TO_ASCII, WAITING_SUBSUBCATEGORY, CHANGE_ASCII_TO_UKR, 
-    CAT_ASCII_TO_UKR, CAT_UKR_TO_ASCII, SUB_UKR_TO_ASCII, WAITING_ACCOUNT_INPUT, ACCOUNT_MAP, SUBSUB_ASCII_TO_UKR
+    CAT_ASCII_TO_UKR, CAT_UKR_TO_ASCII, SUB_UKR_TO_ASCII, WAITING_ACCOUNT_INPUT, ACCOUNT_MAP, SUBSUB_ASCII_TO_UKR,
+    WAITING_DIVIDENDS_OWNER, WAITING_DIVIDENDS_CATEGORY, WAITING_DIVIDENDS_ACCOUNT, WAITING_DIVIDENDS_AMOUNT,
+    DIVIDENDS_CONFIG
 ) 
 from sheets import add_expense_to_sheet, parse_expense, parse_expense_simple
 from handlers.utils import send_main_menu, handle_back_to_main
@@ -96,11 +98,19 @@ async def handle_expense_type_selection(update: Update, context: ContextTypes.DE
     context.user_data['expense_type'] = expense_type
     
     if expense_type == 'dividends':
+        # Показуємо вибір особи (Ваня/Яна)
+        keyboard = [
+            [InlineKeyboardButton("👤 Ваня", callback_data="dividends_owner_vanya")],
+            [InlineKeyboardButton("👤 Яна", callback_data="dividends_owner_yana")],
+            [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(
-            "✅ **Dividends**\n\n📝 Введіть: `СУМА ФОП Ім'я` (напр. `2000 ФОП2 Ваня`):",
+            "✅ **Dividends**\n\n👤 Оберіть власника:",
+            reply_markup=reply_markup,
             parse_mode='Markdown'
         )
-        return WAITING_EXPENSE_INPUT
+        return WAITING_DIVIDENDS_OWNER
         
     elif expense_type == 'other':
         # Починаємо з вибору Періоду
@@ -109,6 +119,179 @@ async def handle_expense_type_selection(update: Update, context: ContextTypes.DE
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("📆 Оберіть період:", reply_markup=reply_markup)
         return WAITING_PERIOD
+
+# --- Обробники для Dividends ---
+async def handle_dividends_owner_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробка вибору власника для dividends (Ваня/Яна)"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "back_main":
+        return await handle_back_to_main(update, context)
+    
+    owner_key = query.data.split('_')[-1]  # vanya або yana
+    owner_name = DIVIDENDS_CONFIG['owners'].get(owner_key, owner_key)
+    context.user_data['dividends_owner'] = owner_name
+    context.user_data['dividends_owner_key'] = owner_key
+    
+    # Показуємо категорії для обраного власника
+    categories = DIVIDENDS_CONFIG['categories_by_owner'].get(owner_key, {})
+    keyboard = [
+        [InlineKeyboardButton(cat_name, callback_data=f"dividends_category_{cat_key}")]
+        for cat_key, cat_name in categories.items()
+    ]
+    keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(
+        f"✅ Власник: **{owner_name}**\n\n📂 Оберіть категорію:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+    return WAITING_DIVIDENDS_CATEGORY
+
+async def handle_dividends_category_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробка вибору категорії для dividends"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "back_main":
+        # Повертаємося до вибору особи
+        keyboard = [
+            [InlineKeyboardButton("👤 Ваня", callback_data="dividends_owner_vanya")],
+            [InlineKeyboardButton("👤 Яна", callback_data="dividends_owner_yana")],
+            [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(
+            "✅ **Dividends**\n\n👤 Оберіть власника:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        return WAITING_DIVIDENDS_OWNER
+    
+    category_key = query.data.split('_')[-1]
+    owner_key = context.user_data.get('dividends_owner_key')
+    category_name = DIVIDENDS_CONFIG['categories_by_owner'].get(owner_key, {}).get(category_key, category_key)
+    context.user_data['dividends_category'] = category_name
+    
+    # Переходимо до вибору ФОПа
+    keyboard = [
+        [InlineKeyboardButton("ФОП №1 Радул І.І.", callback_data="dividends_account_1")],
+        [InlineKeyboardButton("ФОП №2 Радул Я.Ю.", callback_data="dividends_account_2")],
+        [InlineKeyboardButton("ФОП №3 Скидан Х.С.", callback_data="dividends_account_3")],
+        [InlineKeyboardButton("ФОП №4 Досієвич В.П.", callback_data="dividends_account_4")],
+        [InlineKeyboardButton("ФОП №5 Демедюк Л.В.", callback_data="dividends_account_5")],
+        [InlineKeyboardButton("ФОП №6 Спельчук А.А.", callback_data="dividends_account_6")],
+        [InlineKeyboardButton("ФОП №7 Спельчук О.Ю.", callback_data="dividends_account_7")],
+        [InlineKeyboardButton("ФОП №8 Чолан Л.", callback_data="dividends_account_8")],
+        [InlineKeyboardButton("Інший", callback_data="dividends_account_other")],
+        [InlineKeyboardButton("⬅️ Назад", callback_data="back_main")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(
+        f"✅ Категорія: **{category_name}**\n\n💼 Оберіть ФОП:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+    return WAITING_DIVIDENDS_ACCOUNT
+
+async def handle_dividends_account_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробка вибору ФОПа для dividends"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "back_main":
+        # Повертаємося до вибору категорії
+        owner_key = context.user_data.get('dividends_owner_key')
+        owner_name = context.user_data.get('dividends_owner', '')
+        categories = DIVIDENDS_CONFIG['categories_by_owner'].get(owner_key, {})
+        keyboard = [
+            [InlineKeyboardButton(cat_name, callback_data=f"dividends_category_{cat_key}")]
+            for cat_key, cat_name in categories.items()
+        ]
+        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_main")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(
+            f"✅ Власник: **{owner_name}**\n\n📂 Оберіть категорію:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        return WAITING_DIVIDENDS_CATEGORY
+    
+    if query.data == "dividends_account_other":
+        await query.message.edit_text("💼 Введіть назву ФОПа:")
+        # Використовуємо той самий стан, але handle_account_input перевірить expense_type
+        return WAITING_ACCOUNT_INPUT
+    
+    account_key = query.data.split('_')[-1]
+    account_name = ACCOUNT_MAP.get(account_key, f"ФОП №{account_key}")
+    context.user_data['dividends_account'] = account_name
+    
+    await query.message.edit_text(
+        "💰 Введіть суму та примітку (напр. `2000 Оплата за послуги`):\n\n"
+        "Можна ввести просто суму або суму з описом.",
+        parse_mode='Markdown'
+    )
+    return WAITING_DIVIDENDS_AMOUNT
+
+async def handle_dividends_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробка введення суми та примітки для dividends"""
+    text = update.message.text.strip()
+    
+    # Парсимо суму (може бути просто число або число + опис)
+    parts = text.split(maxsplit=1)
+    try:
+        amount = float(parts[0].replace(',', '.').replace(' ', ''))
+    except (ValueError, IndexError):
+        await update.message.reply_text("⚠️ Невірний формат. Введіть суму (напр. `2000` або `2000 Оплата`):", parse_mode='Markdown')
+        return WAITING_DIVIDENDS_AMOUNT
+    
+    if amount <= 0:
+        await update.message.reply_text("⚠️ Сума повинна бути більше нуля.")
+        return WAITING_DIVIDENDS_AMOUNT
+    
+    note = parts[1] if len(parts) > 1 else None
+    
+    # Формуємо дані для запису
+    selected_date = context.user_data.get('selected_date', datetime.datetime.now().strftime("%d.%m.%Y"))
+    owner = context.user_data.get('dividends_owner', '')
+    category = context.user_data.get('dividends_category', '')
+    account = context.user_data.get('dividends_account', '')
+    
+    parsed = {
+        "джерело": account,
+        "власник": owner,
+        "категорія": category,
+        "сума": amount,
+        "примітка": note.strip() if note else None
+    }
+    
+    try:
+        parsed['Дата'] = selected_date
+        add_expense_to_sheet(parsed, context.user_data, 'dividends')
+        
+        # Формуємо підтвердження
+        msg = f"✅ Додано в **DIVIDENDS**!\n\n"
+        msg += f"**Дата**: {selected_date}\n"
+        msg += f"**Власник**: {owner}\n"
+        msg += f"**Категорія**: {category}\n"
+        msg += f"**ФОП**: {account}\n"
+        msg += f"**Сума**: {amount} грн"
+        if note:
+            msg += f"\n**Примітка**: {note}"
+        
+        await update.message.reply_text(msg, parse_mode='Markdown')
+    except Exception as e:
+        logging.error(f"❌ Помилка запису: {e}")
+        await update.message.reply_text("❌ Помилка запису. Спробуйте ще раз.")
+        return WAITING_DIVIDENDS_AMOUNT
+    
+    # Успішне завершення
+    context.user_data.clear()
+    await send_main_menu(update, context, "Операція завершена.")
+    return ConversationHandler.END
 
 # --- Покроковий вибір для 'other' ---
 async def handle_period_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -280,9 +463,22 @@ async def handle_account_selection(update: Update, context: ContextTypes.DEFAULT
         return WAITING_EXPENSE_INPUT
 
 async def handle_account_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['account'] = update.message.text.strip()
-    await update.message.reply_text("💰 Введіть суму та опис (напр. `15000 ЗП Вова`):")
-    return WAITING_EXPENSE_INPUT
+    account_name = update.message.text.strip()
+    
+    # Перевіряємо, чи це dividends або other
+    expense_type = context.user_data.get('expense_type')
+    if expense_type == 'dividends':
+        context.user_data['dividends_account'] = account_name
+        await update.message.reply_text(
+            "💰 Введіть суму та примітку (напр. `2000 Оплата за послуги`):\n\n"
+            "Можна ввести просто суму або суму з описом.",
+            parse_mode='Markdown'
+        )
+        return WAITING_DIVIDENDS_AMOUNT
+    else:
+        context.user_data['account'] = account_name
+        await update.message.reply_text("💰 Введіть суму та опис (напр. `15000 ЗП Вова`):")
+        return WAITING_EXPENSE_INPUT
 
 # --- Обробка суми ---
 async def process_expense_input(update: Update, context: ContextTypes.DEFAULT_TYPE):

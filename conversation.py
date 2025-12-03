@@ -7,7 +7,9 @@ from handlers.expense_handler import (
     handle_period_selection, handle_location_selection, handle_change_selection,
     handle_category_selection, handle_subcategory_selection,
     handle_person_selection, handle_manual_person_input,
-    ask_account_selection, handle_account_selection, handle_account_input, handle_subsubcategory_selection, WAITING_SUBCATEGORY
+    ask_account_selection, handle_account_selection, handle_account_input, handle_subsubcategory_selection, WAITING_SUBCATEGORY,
+    handle_dividends_owner_selection, handle_dividends_category_selection,
+    handle_dividends_account_selection, handle_dividends_amount_input
 )
 # --- Додаємо імпорт для simplified_expense ---
 from handlers.simplified_expense import (
@@ -36,7 +38,9 @@ from config import (
     WAITING_EXPENSE_DATE, WAITING_MANUAL_DATE, WAITING_REPORT_OWNER, WAITING_REPORT_FOP,
     WAITING_PERSON_NAME,
     WAITING_ACCOUNT_SELECTION,
-    WAITING_ACCOUNT_INPUT
+    WAITING_ACCOUNT_INPUT,
+    WAITING_DIVIDENDS_OWNER, WAITING_DIVIDENDS_CATEGORY,
+    WAITING_DIVIDENDS_ACCOUNT, WAITING_DIVIDENDS_AMOUNT
 )
 
 
@@ -88,6 +92,19 @@ expense_conv = ConversationHandler(
         WAITING_EXPENSE_TYPE: [
             CallbackQueryHandler(handle_expense_type_selection, pattern="^(expense_type_dividends|expense_type_other|back_main)$")
         ],
+        # Стани для Dividends
+        WAITING_DIVIDENDS_OWNER: [
+            CallbackQueryHandler(handle_dividends_owner_selection, pattern="^(dividends_owner_|back_main$)"),
+        ],
+        WAITING_DIVIDENDS_CATEGORY: [
+            CallbackQueryHandler(handle_dividends_category_selection, pattern="^(dividends_category_|back_main$)"),
+        ],
+        WAITING_DIVIDENDS_ACCOUNT: [
+            CallbackQueryHandler(handle_dividends_account_selection, pattern="^(dividends_account_|back_main$)"),
+        ],
+        WAITING_DIVIDENDS_AMOUNT: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_dividends_amount_input),
+        ],
 
         WAITING_PERIOD: [
             CallbackQueryHandler(handle_period_selection, pattern="^period_"),
@@ -126,6 +143,7 @@ expense_conv = ConversationHandler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, handle_account_input),
             CallbackQueryHandler(handle_back_to_main, pattern="^back_main$"),
         ],
+        # WAITING_ACCOUNT_INPUT також використовується для dividends при введенні ФОПа вручну
         WAITING_EXPENSE_INPUT: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, process_expense_input)
         ],
